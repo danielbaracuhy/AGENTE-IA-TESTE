@@ -1,800 +1,995 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Análise de Campanhas Meta Ads — Digitalizando Negócios</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-  <style>
-    /* ── Reset & Base ─────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Analisador de Campanhas Meta Ads</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e334d;
+  --accent:#4f7ef8;--accent2:#7c3aed;
+  --green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--cyan:#06b6d4;
+  --text:#e2e8f0;--muted:#94a3b8;
+  --radius:12px;--shadow:0 4px 24px rgba(0,0,0,.5);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.6;min-height:100vh}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 
-    :root {
-      --bg:         #0f1117;
-      --surface:    #1a1d27;
-      --surface2:   #22263a;
-      --border:     #2e334d;
-      --accent:     #4f7ef8;
-      --accent2:    #7c3aed;
-      --green:      #22c55e;
-      --yellow:     #f59e0b;
-      --red:        #ef4444;
-      --text:       #e2e8f0;
-      --muted:      #94a3b8;
-      --radius:     12px;
-      --shadow:     0 4px 24px rgba(0,0,0,.45);
-    }
+/* ── UPLOAD ──────────────────────────────────────────── */
+#screen-upload{
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:40px 20px;
+  background:radial-gradient(ellipse at 50% 0%,rgba(79,126,248,.14) 0%,transparent 65%)
+}
+.up-logo{font-size:56px;margin-bottom:18px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.up-title{
+  font-size:clamp(22px,5vw,38px);font-weight:800;text-align:center;margin-bottom:8px;
+  background:linear-gradient(135deg,#fff 0%,#94a3b8 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent
+}
+.up-title span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.up-sub{color:var(--muted);text-align:center;max-width:480px;font-size:15px;margin-bottom:36px}
+.drop-zone{
+  width:100%;max-width:520px;background:var(--surface);
+  border:2px dashed var(--border);border-radius:18px;
+  padding:48px 28px;text-align:center;cursor:pointer;
+  transition:all .25s;position:relative;margin-bottom:16px
+}
+.drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:rgba(79,126,248,.07);transform:scale(1.01)}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dz-icon{font-size:42px;margin-bottom:12px;display:block}
+.dz-title{font-size:16px;font-weight:600;margin-bottom:4px}
+.dz-sub{font-size:12px;color:var(--muted)}
+#file-name{
+  display:none;margin-top:12px;background:rgba(79,126,248,.15);
+  border-radius:8px;padding:7px 14px;font-size:12px;color:var(--accent)
+}
+.btn-analyze{
+  width:100%;max-width:520px;border:none;border-radius:14px;
+  padding:15px;font-size:16px;font-weight:700;color:#fff;cursor:pointer;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  transition:all .2s
+}
+.btn-analyze:hover:not(:disabled){opacity:.9;transform:translateY(-2px);box-shadow:0 8px 28px rgba(79,126,248,.4)}
+.btn-analyze:disabled{opacity:.35;cursor:not-allowed}
+.up-features{display:flex;gap:22px;margin-top:28px;flex-wrap:wrap;justify-content:center}
+.feat{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
 
-    html { scroll-behavior: smooth; }
+/* ── LOADING ─────────────────────────────────────────── */
+#screen-loading{
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:40px 20px
+}
+.ld-icon{font-size:48px;margin-bottom:22px;animation:spin 1.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ld-title{font-size:21px;font-weight:700;color:#fff;margin-bottom:6px}
+.ld-step-text{font-size:13px;color:var(--muted);margin-bottom:28px;min-height:20px}
+.prog-wrap{width:100%;max-width:420px;background:var(--surface);border-radius:100px;height:7px;overflow:hidden;margin-bottom:20px}
+.prog-bar{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s ease;width:0%}
+.ld-steps{display:flex;flex-direction:column;gap:8px;width:100%;max-width:420px}
+.ld-step-item{
+  display:flex;align-items:center;gap:10px;padding:9px 14px;
+  border-radius:10px;background:var(--surface);font-size:12px;color:var(--muted);transition:all .3s
+}
+.ld-step-item.active{background:var(--surface2);color:var(--text)}
+.ld-step-item.done{background:rgba(34,197,94,.08);color:var(--green)}
+.ld-step-item .si{font-size:14px;width:18px;text-align:center}
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      font-size: 15px;
-      line-height: 1.6;
-      min-height: 100vh;
-    }
+/* ── DASHBOARD ───────────────────────────────────────── */
+.dash-header{
+  background:linear-gradient(135deg,#12152b,#1a1d27);
+  border-bottom:1px solid var(--border);padding:14px 24px;
+  position:sticky;top:0;z-index:100
+}
+.dash-header-inner{
+  max-width:1280px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px
+}
+.dash-brand{display:flex;align-items:center;gap:12px}
+.brand-icon{
+  width:38px;height:38px;border-radius:9px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;font-size:18px
+}
+.brand-title{font-size:15px;font-weight:700;color:#fff}
+.brand-sub{font-size:10px;color:var(--muted)}
+.dash-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:none;border-radius:10px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
 
-    /* ── Layout ───────────────────────────────────────────────── */
-    .wrapper { max-width: 1280px; margin: 0 auto; padding: 0 24px 60px; }
+.dash-body{max-width:1280px;margin:0 auto;padding:0 20px 60px}
+.dash-meta{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:12px 18px;margin-top:22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap
+}
+.meta-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.meta-item strong{color:var(--text)}
+.meta-sep{color:var(--border);font-size:10px}
 
-    /* ── Header ───────────────────────────────────────────────── */
-    header {
-      background: linear-gradient(135deg, #1a1d27 0%, #12152b 100%);
-      border-bottom: 1px solid var(--border);
-      padding: 28px 24px 24px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(10px);
-    }
-    .header-inner {
-      max-width: 1280px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .header-logo {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-    .logo-icon {
-      width: 42px; height: 42px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px;
-      flex-shrink: 0;
-    }
-    h1 {
-      font-size: clamp(16px, 2.5vw, 22px);
-      font-weight: 700;
-      color: #fff;
-      line-height: 1.2;
-    }
-    h1 span { color: var(--accent); }
-    .header-meta {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 4px;
-    }
-    .period-badge {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 4px 14px;
-      font-size: 12px;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-    .generated-at {
-      font-size: 11px;
-      color: var(--muted);
-    }
+.section{margin-top:30px}
+.sec-title{
+  font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px
+}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
 
-    /* ── Section headers ──────────────────────────────────────── */
-    .section { margin-top: 36px; }
-    .section-title {
-      font-size: 13px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .1em;
-      color: var(--muted);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .section-title::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px}
+.kpi{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;position:relative;overflow:hidden;
+  transition:transform .2s,box-shadow .2s;cursor:default
+}
+.kpi:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--kc,var(--accent))}
+.kpi-icon{font-size:19px;margin-bottom:7px;display:block}
+.kpi-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px}
+.kpi-val{font-size:22px;font-weight:700;color:#fff;line-height:1.1}
+.kpi-sub{font-size:9px;color:var(--muted);margin-top:3px}
+.kpi-badge{
+  position:absolute;top:12px;right:10px;
+  font-size:9px;font-weight:600;padding:2px 7px;border-radius:20px
+}
+.bg-green{background:rgba(34,197,94,.15);color:var(--green)}
+.bg-yellow{background:rgba(245,158,11,.15);color:var(--yellow)}
+.bg-red{background:rgba(239,68,68,.15);color:var(--red)}
+.bg-blue{background:rgba(79,126,248,.15);color:var(--accent)}
 
-    /* ── KPI Cards ────────────────────────────────────────────── */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
-      gap: 16px;
-    }
-    .kpi-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-      position: relative;
-      overflow: hidden;
-      transition: transform .2s, box-shadow .2s;
-    }
-    .kpi-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
-    .kpi-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: var(--kpi-color, var(--accent));
-    }
-    .kpi-icon {
-      font-size: 22px;
-      margin-bottom: 10px;
-      display: block;
-    }
-    .kpi-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-    .kpi-value {
-      font-size: 26px;
-      font-weight: 700;
-      color: #fff;
-      line-height: 1;
-    }
-    .kpi-sub {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 6px;
-    }
-    .kpi-trend {
-      position: absolute;
-      top: 16px; right: 16px;
-      font-size: 11px;
-      font-weight: 600;
-      padding: 3px 8px;
-      border-radius: 20px;
-    }
-    .trend-good  { background: rgba(34,197,94,.15);  color: var(--green); }
-    .trend-warn  { background: rgba(245,158,11,.15); color: var(--yellow); }
-    .trend-bad   { background: rgba(239,68,68,.15);  color: var(--red); }
+/* Charts */
+.charts-row{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+@media(max-width:820px){.charts-row{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.card-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:7px}
+.cdot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
 
-    /* ── Charts row ───────────────────────────────────────────── */
-    .charts-grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 16px;
-    }
-    @media (max-width: 860px) { .charts-grid { grid-template-columns: 1fr; } }
+/* Funnel */
+.funnel{display:flex;flex-direction:column;gap:7px}
+.fn-row{display:flex;align-items:center;gap:9px}
+.fn-lbl{font-size:9px;color:var(--muted);width:82px;flex-shrink:0;text-align:right}
+.fn-wrap{flex:1;background:var(--surface2);border-radius:5px;height:24px;overflow:hidden}
+.fn-bar{
+  height:100%;border-radius:5px;display:flex;align-items:center;
+  padding-left:8px;font-size:10px;font-weight:600;color:#fff;
+  transition:width 1.1s cubic-bezier(.25,.46,.45,.94);white-space:nowrap
+}
+.fn-pct{font-size:9px;color:var(--muted);width:38px;text-align:right;flex-shrink:0}
 
-    .chart-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-    }
-    .chart-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .chart-title .dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--accent);
-    }
-    .chart-wrap { position: relative; }
+/* Table */
+.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:11px;min-width:680px}
+thead{background:var(--surface2)}
+th{padding:10px 13px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;white-space:nowrap}
+td{padding:11px 13px;border-top:1px solid var(--border)}
+tr:hover td{background:var(--surface2)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:600}
 
-    /* ── Funil ────────────────────────────────────────────────── */
-    .funnel-steps { display: flex; flex-direction: column; gap: 8px; }
-    .funnel-step {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .funnel-label {
-      font-size: 11px;
-      color: var(--muted);
-      width: 90px;
-      flex-shrink: 0;
-      text-align: right;
-    }
-    .funnel-bar-wrap {
-      flex: 1;
-      background: var(--surface2);
-      border-radius: 6px;
-      height: 28px;
-      overflow: hidden;
-      position: relative;
-    }
-    .funnel-bar {
-      height: 100%;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      padding-left: 10px;
-      font-size: 12px;
-      font-weight: 600;
-      color: #fff;
-      transition: width 1.2s cubic-bezier(.25,.46,.45,.94);
-      white-space: nowrap;
-    }
-    .funnel-pct {
-      font-size: 11px;
-      color: var(--muted);
-      width: 42px;
-      text-align: right;
-      flex-shrink: 0;
-    }
+/* Alerts */
+.alerts{display:flex;flex-direction:column;gap:9px}
+.al{
+  background:var(--surface);border:1px solid var(--border);
+  border-left:4px solid transparent;border-radius:var(--radius);
+  padding:12px 16px;display:flex;align-items:flex-start;gap:11px
+}
+.al.green{border-left-color:var(--green)}
+.al.yellow{border-left-color:var(--yellow)}
+.al.red{border-left-color:var(--red)}
+.al-icon{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0
+}
+.green .al-icon{background:rgba(34,197,94,.15)}
+.yellow .al-icon{background:rgba(245,158,11,.15)}
+.red .al-icon{background:rgba(239,68,68,.15)}
+.al-title{font-weight:600;font-size:12px;margin-bottom:2px}
+.green .al-title{color:var(--green)}
+.yellow .al-title{color:var(--yellow)}
+.red .al-title{color:var(--red)}
+.al-desc{font-size:11px;color:var(--muted);line-height:1.5}
 
-    /* ── Alertas ──────────────────────────────────────────────── */
-    .alerts-grid { display: flex; flex-direction: column; gap: 12px; }
-    .alert-item {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px 20px;
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
-      border-left: 4px solid transparent;
-    }
-    .alert-item.ok     { border-left-color: var(--green); }
-    .alert-item.warn   { border-left-color: var(--yellow); }
-    .alert-item.danger { border-left-color: var(--red); }
+/* Recommendations */
+.recs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.rec{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
+.rec-num{font-size:44px;font-weight:800;color:var(--border);position:absolute;top:-5px;right:12px;line-height:1;user-select:none}
+.rec-ico{font-size:22px;margin-bottom:7px;display:block}
+.rec-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:5px}
+.rec-desc{font-size:11px;color:var(--muted);line-height:1.6}
+.rec-tag{
+  margin-top:8px;display:inline-flex;align-items:center;gap:4px;
+  background:rgba(79,126,248,.14);color:var(--accent);
+  border-radius:20px;padding:2px 9px;font-size:9px;font-weight:600
+}
 
-    .alert-icon {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px;
-      flex-shrink: 0;
-    }
-    .ok     .alert-icon { background: rgba(34,197,94,.15);  }
-    .warn   .alert-icon { background: rgba(245,158,11,.15); }
-    .danger .alert-icon { background: rgba(239,68,68,.15);  }
+/* Footer */
+.dash-footer{
+  border-top:1px solid var(--border);padding:18px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:8px;max-width:1280px;margin:0 auto
+}
+.dash-footer p{font-size:10px;color:var(--muted)}
 
-    .alert-body {}
-    .alert-title { font-weight: 600; font-size: 14px; margin-bottom: 3px; }
-    .ok     .alert-title { color: var(--green);  }
-    .warn   .alert-title { color: var(--yellow); }
-    .danger .alert-title { color: var(--red);    }
-    .alert-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
-
-    /* ── Recomendações ────────────────────────────────────────── */
-    .rec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 16px; }
-    .rec-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 22px;
-      position: relative;
-      overflow: hidden;
-    }
-    .rec-number {
-      font-size: 52px;
-      font-weight: 800;
-      color: var(--border);
-      position: absolute;
-      top: -8px; right: 16px;
-      line-height: 1;
-      user-select: none;
-    }
-    .rec-icon { font-size: 26px; margin-bottom: 10px; display: block; }
-    .rec-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 8px; }
-    .rec-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
-    .rec-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      margin-top: 12px;
-      background: rgba(79,126,248,.15);
-      color: var(--accent);
-      border-radius: 20px;
-      padding: 4px 12px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    /* ── Tabela de dados ──────────────────────────────────────── */
-    .table-wrap {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    thead { background: var(--surface2); }
-    th {
-      padding: 12px 16px;
-      text-align: left;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      color: var(--muted);
-      font-weight: 600;
-    }
-    td {
-      padding: 13px 16px;
-      border-top: 1px solid var(--border);
-      color: var(--text);
-    }
-    tr:hover td { background: var(--surface2); }
-    .td-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-    .badge-active { background: rgba(34,197,94,.15); color: var(--green); }
-    .badge-ok     { background: rgba(79,126,248,.15); color: var(--accent); }
-    .badge-warn   { background: rgba(245,158,11,.15); color: var(--yellow); }
-
-    /* ── Footer ───────────────────────────────────────────────── */
-    footer {
-      margin-top: 56px;
-      border-top: 1px solid var(--border);
-      padding: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-      max-width: 1280px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    footer p { font-size: 12px; color: var(--muted); }
-    .footer-logo {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--muted);
-    }
-
-    /* ── Scrollbar ────────────────────────────────────────────── */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  </style>
+@media(max-width:600px){
+  .dash-body{padding:0 10px 40px}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .dash-actions{gap:5px}
+  .btn{padding:6px 10px;font-size:11px}
+}
+</style>
 </head>
 <body>
 
-<!-- ═══════════════════ HEADER ═══════════════════ -->
-<header>
-  <div class="header-inner">
-    <div class="header-logo">
-      <div class="logo-icon">📊</div>
-      <div>
-        <h1>Análise de Campanhas <span>Meta Ads</span></h1>
-        <p style="font-size:12px;color:var(--muted);margin-top:2px">Digitalizando Negócios</p>
-      </div>
-    </div>
-    <div class="header-meta">
-      <span class="period-badge">📅 12/05/2026 — 25/05/2026</span>
-      <span class="generated-at" id="generated-at"></span>
-    </div>
-  </div>
-</header>
+<!-- ═══ SCREEN 1: UPLOAD ══════════════════════════════ -->
+<div id="screen-upload">
+  <div class="up-logo">📊</div>
+  <h1 class="up-title">Analisador de Campanhas <span>Meta Ads</span></h1>
+  <p class="up-sub">Faça upload do seu relatório CSV do Meta Ads e receba uma análise completa em segundos</p>
 
-<!-- ═══════════════════ BODY ═══════════════════ -->
-<div class="wrapper">
-
-  <!-- ── KPI CARDS ─────────────────────────────────── -->
-  <div class="section">
-    <p class="section-title">📌 Métricas Principais</p>
-    <div class="kpi-grid">
-
-      <div class="kpi-card" style="--kpi-color:#4f7ef8">
-        <span class="kpi-icon">💰</span>
-        <span class="kpi-trend trend-warn">1 campanha</span>
-        <p class="kpi-label">Total Investido</p>
-        <p class="kpi-value">R$&nbsp;437,60</p>
-        <p class="kpi-sub">Período: 13 dias</p>
-      </div>
-
-      <div class="kpi-card" style="--kpi-color:#22c55e">
-        <span class="kpi-icon">🖱️</span>
-        <span class="kpi-trend trend-good">CTR 5,88%</span>
-        <p class="kpi-label">Cliques no Link</p>
-        <p class="kpi-value">269</p>
-        <p class="kpi-sub">CPC médio R$ 1,63</p>
-      </div>
-
-      <div class="kpi-card" style="--kpi-color:#7c3aed">
-        <span class="kpi-icon">🛒</span>
-        <span class="kpi-trend trend-warn">pixel ativo</span>
-        <p class="kpi-label">Conversões (Compras)</p>
-        <p class="kpi-value">4</p>
-        <p class="kpi-sub">Pixel: fb_pixel_purchase</p>
-      </div>
-
-      <div class="kpi-card" style="--kpi-color:#f59e0b">
-        <span class="kpi-icon">🎯</span>
-        <span class="kpi-trend trend-good">&lt; R$150</span>
-        <p class="kpi-label">Custo por Compra</p>
-        <p class="kpi-value">R$&nbsp;109,40</p>
-        <p class="kpi-sub">Meta: abaixo de R$ 150</p>
-      </div>
-
-      <div class="kpi-card" style="--kpi-color:#06b6d4">
-        <span class="kpi-icon">📈</span>
-        <span class="kpi-trend trend-good">Excelente</span>
-        <p class="kpi-label">CTR (Link)</p>
-        <p class="kpi-value">5,88%</p>
-        <p class="kpi-sub">Benchmark: &gt;1% bom, &gt;3% ótimo</p>
-      </div>
-
-      <div class="kpi-card" style="--kpi-color:#ef4444">
-        <span class="kpi-icon">🔄</span>
-        <span class="kpi-trend trend-warn">Melhorar</span>
-        <p class="kpi-label">Conv. Landing Page</p>
-        <p class="kpi-value">2,01%</p>
-        <p class="kpi-sub">4 compras / 199 views</p>
-      </div>
-
-    </div>
+  <div class="drop-zone" id="drop-zone">
+    <input type="file" id="file-input" accept=".csv">
+    <span class="dz-icon">📂</span>
+    <p class="dz-title">Arraste e solte seu CSV aqui</p>
+    <p class="dz-sub">ou clique para selecionar o arquivo</p>
+    <div id="file-name">📄 arquivo.csv</div>
   </div>
 
-  <!-- ── CHARTS ─────────────────────────────────────── -->
-  <div class="section">
-    <p class="section-title">📉 Visualizações de Dados</p>
-    <div class="charts-grid">
+  <button class="btn-analyze" id="btn-analyze" disabled>
+    <span>🔍</span> Analisar Campanha
+  </button>
 
-      <!-- Gráfico de Barras -->
-      <div class="chart-card">
-        <p class="chart-title"><span class="dot"></span>Funil de Cliques — Desempenho da Campanha</p>
-        <div class="chart-wrap" style="height:280px">
-          <canvas id="barChart"></canvas>
+  <div class="up-features">
+    <div class="feat">🔒 100% no navegador</div>
+    <div class="feat">⚡ Análise instantânea</div>
+    <div class="feat">📥 Exporta PDF</div>
+    <div class="feat">📊 Gráficos interativos</div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 2: LOADING ═════════════════════════════ -->
+<div id="screen-loading" style="display:none">
+  <div class="ld-icon">⚙️</div>
+  <p class="ld-title">Analisando sua campanha...</p>
+  <p class="ld-step-text" id="ld-text">Iniciando...</p>
+  <div class="prog-wrap"><div class="prog-bar" id="prog-bar"></div></div>
+  <div class="ld-steps">
+    <div class="ld-step-item" data-i="0"><span class="si">📂</span> Lendo arquivo CSV</div>
+    <div class="ld-step-item" data-i="1"><span class="si">🔍</span> Identificando colunas</div>
+    <div class="ld-step-item" data-i="2"><span class="si">🧮</span> Calculando métricas</div>
+    <div class="ld-step-item" data-i="3"><span class="si">🚨</span> Gerando alertas automáticos</div>
+    <div class="ld-step-item" data-i="4"><span class="si">📊</span> Montando dashboard</div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 3: DASHBOARD ═══════════════════════════ -->
+<div id="screen-dashboard" style="display:none">
+  <header class="dash-header">
+    <div class="dash-header-inner">
+      <div class="dash-brand">
+        <div class="brand-icon">📊</div>
+        <div>
+          <p class="brand-title">Meta Ads Analytics</p>
+          <p class="brand-sub" id="ds-filename">—</p>
         </div>
       </div>
+      <div class="dash-actions">
+        <button class="btn btn-ghost" id="btn-new">↩ Nova Análise</button>
+        <button class="btn btn-primary" id="btn-pdf">⬇ Exportar PDF</button>
+      </div>
+    </div>
+  </header>
 
-      <!-- Gráfico de Rosca -->
-      <div class="chart-card">
-        <p class="chart-title"><span class="dot" style="background:var(--accent2)"></span>Distribuição do Investimento</p>
-        <div class="chart-wrap" style="height:280px">
-          <canvas id="doughnutChart"></canvas>
+  <div class="dash-body">
+    <div class="dash-meta" id="ds-meta"></div>
+
+    <div class="section">
+      <p class="sec-title">📌 Métricas Principais</p>
+      <div class="kpi-grid" id="kpi-grid"></div>
+    </div>
+
+    <div class="section">
+      <p class="sec-title">📉 Visualizações</p>
+      <div class="charts-row">
+        <div class="card">
+          <p class="card-title"><span class="cdot"></span>Funil de Cliques</p>
+          <div style="position:relative;height:270px"><canvas id="barChart"></canvas></div>
+        </div>
+        <div class="card">
+          <p class="card-title"><span class="cdot" style="background:var(--accent2)"></span>Distribuição do Investimento</p>
+          <div style="position:relative;height:270px"><canvas id="doughnutChart"></canvas></div>
         </div>
       </div>
+    </div>
 
+    <div class="section">
+      <p class="sec-title">🔽 Diagnóstico do Funil</p>
+      <div class="card">
+        <p class="card-title"><span class="cdot" style="background:var(--green)"></span>Funil Consolidado de Vendas</p>
+        <div class="funnel" id="funnel"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="sec-title">📋 Dados por Campanha</p>
+      <div class="tbl-wrap">
+        <table><thead id="tbl-head"></thead><tbody id="tbl-body"></tbody></table>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="sec-title">🚨 Alertas e Sinalizações</p>
+      <div class="alerts" id="alerts"></div>
+    </div>
+
+    <div class="section">
+      <p class="sec-title">💡 Recomendações Estratégicas</p>
+      <div class="recs" id="recs"></div>
     </div>
   </div>
 
-  <!-- ── FUNIL VISUAL ───────────────────────────────── -->
-  <div class="section">
-    <p class="section-title">🔽 Diagnóstico do Funil de Vendas</p>
-    <div class="chart-card">
-      <p class="chart-title"><span class="dot" style="background:var(--green)"></span>CAMP 01 OLEO USADO 13/05 — Funil completo</p>
-      <div class="funnel-steps" id="funnel"></div>
-    </div>
-  </div>
+  <footer class="dash-footer">
+    <p>Desenvolvido por <strong>Digitalizando Negócios</strong> · Meta Ads Analytics v2.0</p>
+    <p id="ds-gen-time">—</p>
+  </footer>
+</div>
 
-  <!-- ── TABELA DE CAMPANHA ─────────────────────────── -->
-  <div class="section">
-    <p class="section-title">📋 Dados Detalhados por Campanha</p>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Campanha</th>
-            <th>Status</th>
-            <th>Investido</th>
-            <th>Alcance</th>
-            <th>Impressões</th>
-            <th>Cliques</th>
-            <th>CTR</th>
-            <th>Views LP</th>
-            <th>Taxa LP</th>
-            <th>Conversões</th>
-            <th>CPP</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>CAMP 01 OLEO USADO 13/05</strong></td>
-            <td><span class="td-badge badge-active">● Ativa</span></td>
-            <td>R$ 437,60</td>
-            <td>3.449</td>
-            <td>4.573</td>
-            <td>269</td>
-            <td><span class="td-badge badge-ok">5,88%</span></td>
-            <td>199</td>
-            <td><span class="td-badge badge-warn">74,0%</span></td>
-            <td>4</td>
-            <td>R$ 109,40</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- ── ALERTAS ────────────────────────────────────── -->
-  <div class="section">
-    <p class="section-title">🚨 Alertas e Sinalizações</p>
-    <div class="alerts-grid">
-
-      <div class="alert-item ok">
-        <div class="alert-icon">✅</div>
-        <div class="alert-body">
-          <p class="alert-title">CTR Excelente — 5,88%</p>
-          <p class="alert-desc">O CTR de 5,88% está muito acima do benchmark de 1% (bom) e 3% (ótimo). O criativo está altamente relevante para o público. Nenhuma ação necessária — candidato a escala.</p>
-        </div>
-      </div>
-
-      <div class="alert-item ok">
-        <div class="alert-icon">✅</div>
-        <div class="alert-body">
-          <p class="alert-title">Custo por Compra Dentro do Limite — R$ 109,40</p>
-          <p class="alert-desc">O CPP de R$ 109,40 está abaixo do limite de R$ 150 estabelecido como eficiência mínima. A campanha está gerando conversões a um custo aceitável.</p>
-        </div>
-      </div>
-
-      <div class="alert-item warn">
-        <div class="alert-icon">⚠️</div>
-        <div class="alert-body">
-          <p class="alert-title">Perda de Tráfego: Clique → Landing Page (74,0%)</p>
-          <p class="alert-desc">Apenas 74,0% dos usuários que clicaram chegaram à página de vendas (ideal: &gt;80%). Os 70 cliques perdidos representam R$ 113,87 desperdiçados. Verifique velocidade de carregamento e estabilidade do link.</p>
-        </div>
-      </div>
-
-      <div class="alert-item warn">
-        <div class="alert-icon">⚠️</div>
-        <div class="alert-body">
-          <p class="alert-title">Taxa de Conversão da LP Abaixo do Potencial — 2,01%</p>
-          <p class="alert-desc">Dos 199 visitantes da página de vendas, apenas 4 compraram (2,01%). O benchmark de e-commerce é 2-5%. Há oportunidade de otimização de copy, CTA e prova social sem aumentar o orçamento.</p>
-        </div>
-      </div>
-
-      <div class="alert-item ok">
-        <div class="alert-icon">✅</div>
-        <div class="alert-body">
-          <p class="alert-title">Frequência Saudável — 1,33x</p>
-          <p class="alert-desc">A frequência de 1,33 impactos por usuário está dentro do ideal (abaixo de 2,5). Não há saturação de público, e o criativo ainda tem margem para ser exibido sem gerar fadiga.</p>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ── RECOMENDAÇÕES ──────────────────────────────── -->
-  <div class="section">
-    <p class="section-title">💡 Recomendações Estratégicas</p>
-    <div class="rec-grid">
-
-      <div class="rec-card">
-        <span class="rec-number">01</span>
-        <span class="rec-icon">⚡</span>
-        <p class="rec-title">Otimizar a Landing Page</p>
-        <p class="rec-desc">A taxa de chegada à página é de apenas 74% (ideal: &gt;80%). Melhorar a velocidade de carregamento (PageSpeed &gt;90 no mobile), revisar o link de destino e garantir hospedagem estável. Cada 10% de melhora gera mais visitantes sem custo adicional.</p>
-        <span class="rec-badge">⚡ Impacto Alto · Custo Zero</span>
-      </div>
-
-      <div class="rec-card">
-        <span class="rec-number">02</span>
-        <span class="rec-icon">🎯</span>
-        <p class="rec-title">Aumentar a Taxa de Conversão</p>
-        <p class="rec-desc">Taxa atual: 2,01% (meta: &gt;3%). Testar headline específica à dor do público, depoimentos em vídeo, escassez real (estoque limitado, bônus por tempo) e CTA acima da dobra. Um ganho de 1 p.p. geraria 2 compras extras por mês com o mesmo orçamento.</p>
-        <span class="rec-badge">🎯 Impacto Alto · Prioridade 1</span>
-      </div>
-
-      <div class="rec-card">
-        <span class="rec-number">03</span>
-        <span class="rec-icon">📈</span>
-        <p class="rec-title">Escalar com Regras Automáticas</p>
-        <p class="rec-desc">Com CTR de 5,88% e CPP de R$ 109,40, o criativo está validado. Configurar regra automática para aumentar o orçamento em 15% sempre que o CPP ficar abaixo de R$ 120 por 3 dias consecutivos. Testar públicos Lookalike 1–3%.</p>
-        <span class="rec-badge">📈 Escalar Após LP Otimizada</span>
-      </div>
-
-    </div>
-  </div>
-
-</div><!-- /wrapper -->
-
-<!-- ═══════════════════ FOOTER ═══════════════════ -->
-<footer>
-  <div class="footer-logo">
-    <span>📊</span>
-    <span>Digitalizando Negócios — Dashboard Meta Ads</span>
-  </div>
-  <p>Última atualização: <span id="last-update"></span> &nbsp;·&nbsp; Fonte: Meta Ads Manager Export &nbsp;·&nbsp; Período: 12/05/2026 – 25/05/2026</p>
-</footer>
-
-<!-- ═══════════════════ SCRIPTS ═══════════════════ -->
 <script>
-  /* ── Datas dinâmicas ─────────────────────────────────── */
-  const now = new Date();
-  const fmt = d => d.toLocaleString('pt-BR', {
-    day:'2-digit', month:'2-digit', year:'numeric',
-    hour:'2-digit', minute:'2-digit'
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+const S = { file: null, data: null, charts: {} };
+
+function screen(id) {
+  ['screen-upload','screen-loading','screen-dashboard'].forEach(s => {
+    document.getElementById(s).style.display = 'none';
   });
-  document.getElementById('generated-at').textContent  = 'Gerado em ' + fmt(now);
-  document.getElementById('last-update').textContent   = fmt(now);
+  document.getElementById(id).style.display =
+    id === 'screen-loading' ? 'flex' : id === 'screen-dashboard' ? 'block' : 'flex';
+}
 
-  /* ── Dados da campanha ───────────────────────────────── */
-  const campaign = {
-    nome:       'CAMP 01 OLEO USADO 13/05',
-    investido:  437.60,
-    alcance:    3449,
-    impressoes: 4573,
-    cliques:    269,
-    lp_views:   199,
-    conversoes: 4,
-    ctr:        5.88,
-    cpp:        109.40,
-  };
+// ═══════════════════════════════════════════════════════
+// CSV PARSER
+// ═══════════════════════════════════════════════════════
+function parseCSV(raw) {
+  if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
+  const lines = raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l => l.trim());
+  if (lines.length < 2) return null;
 
-  /* ── Paleta ──────────────────────────────────────────── */
-  const palette = {
-    blue:   'rgba(79,126,248,',
-    green:  'rgba(34,197,94,',
-    purple: 'rgba(124,58,237,',
-    amber:  'rgba(245,158,11,',
-    red:    'rgba(239,68,68,',
-    cyan:   'rgba(6,182,212,',
-  };
-  const col = (p, a) => palette[p] + a + ')';
+  function parseLine(line) {
+    const out = []; let f = '', q = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { if (q && line[i+1]==='"') { f+='"'; i++; } else q=!q; }
+      else if (c === ',' && !q) { out.push(f.trim()); f=''; }
+      else f += c;
+    }
+    out.push(f.trim());
+    return out;
+  }
 
+  const headers = parseLine(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseLine(lines[i]);
+    if (vals.every(v => !v)) continue;
+    const obj = {};
+    headers.forEach((h,j) => { obj[h] = vals[j] || ''; });
+    rows.push(obj);
+  }
+  return { headers, rows };
+}
+
+// ═══════════════════════════════════════════════════════
+// COLUMN MAPPER
+// ═══════════════════════════════════════════════════════
+function norm(s) {
+  return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,' ').toLowerCase().trim().replace(/\s+/g,' ');
+}
+
+const COLS = {
+  nome:       ['nome da campanha'],
+  status:     ['veiculacao da campanha'],
+  inicio:     ['inicio dos relatorios'],
+  fim:        ['encerramento dos relatorios'],
+  investido:  ['valor usado brl','quantia gasta brl'],
+  alcance:    ['alcance'],
+  impressoes: ['impressoes'],
+  frequencia: ['frequencia'],
+  cliques:    ['cliques no link'],
+  ctr:        ['ctr taxa de cliques no link'],
+  cpc:        ['cpc custo por clique no link brl'],
+  cpm:        ['cpm custo por 1 000 impressoes brl','cpm brl'],
+  lp_views:   ['visualizacoes da pagina de destino'],
+  custo_lp:   ['custo por visualizacao da pagina de destino brl'],
+  conversoes: ['resultados'],
+  cpp:        ['custo por resultados'],
+};
+
+function buildMap(headers) {
+  const nh = headers.map(h => ({ orig: h, n: norm(h) }));
+  const map = {};
+  for (const [field, pats] of Object.entries(COLS)) {
+    outer: for (const { orig, n } of nh) {
+      for (const pat of pats) {
+        const np = norm(pat);
+        if (n.includes(np) || np.includes(n)) { map[field] = orig; break outer; }
+      }
+    }
+  }
+  return map;
+}
+
+function g(row, map, field) { const k = map[field]; return k ? (row[k]||'') : ''; }
+function fF(v) { if (!v||v==='-') return 0; return parseFloat(String(v).replace(',','.'))||0; }
+function fI(v) { return Math.round(fF(v)); }
+
+// ═══════════════════════════════════════════════════════
+// DATA PROCESSOR
+// ═══════════════════════════════════════════════════════
+function process({ headers, rows }) {
+  const map = buildMap(headers);
+  const r0 = rows[0] || {};
+  const periodo = { inicio: g(r0,map,'inicio'), fim: g(r0,map,'fim') };
+
+  const camps = rows.map(row => {
+    const nome       = g(row,map,'nome')||'Campanha';
+    const status     = g(row,map,'status')||'';
+    const investido  = fF(g(row,map,'investido'));
+    const alcance    = fI(g(row,map,'alcance'));
+    const impressoes = fI(g(row,map,'impressoes'));
+    const frequencia = fF(g(row,map,'frequencia'));
+    const cliques    = fI(g(row,map,'cliques'));
+    const ctr        = fF(g(row,map,'ctr'));
+    const cpc        = fF(g(row,map,'cpc'));
+    const cpm        = fF(g(row,map,'cpm'));
+    const lp_views   = fI(g(row,map,'lp_views'));
+    const custo_lp   = fF(g(row,map,'custo_lp'));
+    const conversoes = fI(g(row,map,'conversoes'));
+    const cpp        = fF(g(row,map,'cpp'));
+    const taxa_clp   = cliques > 0 ? lp_views/cliques*100 : 0;
+    const taxa_conv  = lp_views > 0 ? conversoes/lp_views*100 : 0;
+    return { nome, status, investido, alcance, impressoes, frequencia,
+             cliques, ctr, cpc, cpm, lp_views, custo_lp,
+             conversoes, cpp, taxa_clp, taxa_conv };
+  });
+
+  const sum = k => camps.reduce((a,c) => a+c[k], 0);
+  const ti = sum('investido'), ta = sum('alcance'), tIm = sum('impressoes');
+  const tc = sum('cliques'), tlp = sum('lp_views'), tv = sum('conversoes');
+  const cpp_m  = tv > 0 ? ti/tv : 0;
+  const ctr_m  = tIm > 0 ? tc/tIm*100 : 0;
+  const conv_m = tlp > 0 ? tv/tlp*100 : 0;
+  const clp_m  = tc > 0 ? tlp/tc*100 : 0;
+  const cpc_m  = tc > 0 ? ti/tc : 0;
+
+  const totals = { ti, ta, tIm, tc, tlp, tv, cpp_m, ctr_m, conv_m, clp_m, cpc_m };
+  const alerts = genAlerts(camps);
+  const recs   = genRecs(camps, totals);
+  return { periodo, camps, totals, alerts, recs };
+}
+
+// ═══════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════
+function genAlerts(camps) {
+  const out = [];
+  camps.forEach(c => {
+    const sn = c.nome.length > 38 ? c.nome.slice(0,35)+'...' : c.nome;
+
+    // CTR
+    if (c.ctr < 1)
+      out.push({ t:'red',   ico:'🔴', title:`CTR Crítico — ${sn}`,
+        desc:`CTR de ${p(c.ctr,'%')} abaixo de 1%. Criativo fraco ou público errado. Substituir criativo imediatamente.` });
+    else if (c.ctr < 3)
+      out.push({ t:'yellow', ico:'🟡', title:`CTR Moderado — ${sn}`,
+        desc:`CTR de ${p(c.ctr,'%')} entre 1% e 3%. Há margem de melhora. Testar variações de headline e imagem.` });
+    else
+      out.push({ t:'green',  ico:'🟢', title:`CTR Excelente — ${sn}`,
+        desc:`CTR de ${p(c.ctr,'%')} acima de 3%. Criativo altamente relevante. Candidato ideal para escala de orçamento.` });
+
+    // CPP
+    if (c.cpp > 0) {
+      if (c.cpp > 150)
+        out.push({ t:'red',    ico:'🔴', title:`Custo por Compra Alto — ${sn}`,
+          desc:`CPP de ${brl(c.cpp)} acima de R$150. Campanha ineficiente. Revisar segmentação, criativo e oferta.` });
+      else if (c.cpp > 100)
+        out.push({ t:'yellow', ico:'🟡', title:`Custo por Compra Moderado — ${sn}`,
+          desc:`CPP de ${brl(c.cpp)} entre R$100 e R$150. Aceitável, mas há oportunidade de redução com otimização.` });
+      else
+        out.push({ t:'green',  ico:'🟢', title:`Custo por Compra Ótimo — ${sn}`,
+          desc:`CPP de ${brl(c.cpp)} abaixo de R$100. Excelente eficiência de aquisição. Manter e escalar.` });
+    }
+
+    // Zero conversões
+    if (c.conversoes === 0)
+      out.push({ t:'red', ico:'🔴', title:`Zero Conversões — ${sn}`,
+        desc:`Nenhuma compra registrada pelo pixel. Verificar instalação do pixel, página de vendas e oferta. Considerar pausar.` });
+
+    // Taxa LP
+    if (c.lp_views > 0) {
+      if (c.taxa_conv < 2)
+        out.push({ t:'red',    ico:'🔴', title:`Conversão LP Crítica — ${sn}`,
+          desc:`Taxa de ${p(c.taxa_conv,'%',1)} abaixo de 2%. Página com problemas sérios de copy, oferta ou carregamento.` });
+      else if (c.taxa_conv < 5)
+        out.push({ t:'yellow', ico:'🟡', title:`Conversão LP Moderada — ${sn}`,
+          desc:`Taxa de ${p(c.taxa_conv,'%',1)} entre 2% e 5%. No benchmark, mas pode melhorar com testes de copy e CTA.` });
+      else
+        out.push({ t:'green',  ico:'🟢', title:`Conversão LP Excelente — ${sn}`,
+          desc:`Taxa de ${p(c.taxa_conv,'%',1)} acima de 5%. Página de vendas convertendo muito bem. Escalar o tráfego.` });
+    }
+
+    // Perda click → LP
+    if (c.cliques > 0 && c.taxa_clp < 70)
+      out.push({ t:'yellow', ico:'🟡', title:`Perda de Tráfego — ${sn}`,
+        desc:`Apenas ${p(c.taxa_clp,'%',0)} dos cliques chegaram à LP (ideal >80%). Verificar velocidade e disponibilidade da página.` });
+  });
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════
+// RECOMMENDATIONS
+// ═══════════════════════════════════════════════════════
+function genRecs(camps, t) {
+  const out = [];
+
+  // CTR alto + conv baixa → otimizar LP
+  if (t.ctr_m >= 2 && t.conv_m < 3)
+    out.push({ ico:'🎯', title:'Otimizar a Página de Vendas',
+      desc:`CTR de ${p(t.ctr_m,'%')} mostra anúncio eficiente, mas a conversão de ${p(t.conv_m,'%',1)} na LP está limitando os resultados. Melhorar headline, prova social, CTA e remover distrações.`,
+      tag:'🔥 Alta Prioridade' });
+
+  // CPP alto → revisar público
+  if (t.cpp_m > 120)
+    out.push({ ico:'👥', title:'Revisar Público e Criativo',
+      desc:`CPP médio de ${brl(t.cpp_m)} está elevado. Testar públicos Lookalike 1-3%, revisar oferta e criar variações do criativo com ângulos diferentes (benefício vs. problema vs. prova social).`,
+      tag:'⚡ Impacto Alto' });
+
+  // Taxa click→LP baixa → velocidade
+  if (t.clp_m < 75)
+    out.push({ ico:'⚡', title:'Melhorar Velocidade da Página',
+      desc:`${p(t.clp_m,'%',0)} dos cliques chegam à LP (ideal >80%). Otimizar PageSpeed para mobile (meta >90pts), comprimir imagens, usar CDN e garantir hospedagem estável.`,
+      tag:'🛠 Técnico' });
+
+  // CTR baixo → novos criativos
+  if (t.ctr_m < 1.5)
+    out.push({ ico:'🎨', title:'Testar Novos Criativos',
+      desc:`CTR médio de ${p(t.ctr_m,'%')} abaixo de 1.5%. Criar 3-5 variações: mudar o gancho dos primeiros 3s (vídeo), testar imagem estática vs. carrossel, e diferentes propostas de valor.`,
+      tag:'🎨 Criativo' });
+
+  // Campanhas sem conversão → pausar
+  const zero = camps.filter(c => c.conversoes === 0);
+  if (zero.length)
+    out.push({ ico:'⏸', title:`Pausar ${zero.length} Campanha(s) Sem Conversão`,
+      desc:`${zero.map(c=>`"${c.nome.slice(0,28)}${c.nome.length>28?'...':''}"`).join(', ')} sem compras registradas. Pausar, verificar pixel e estrutura da página antes de reativar.`,
+      tag:'🚫 Urgente' });
+
+  // Boas campanhas → escalar
+  const boas = camps.filter(c => c.ctr >= 3 && c.cpp > 0 && c.cpp < 100);
+  if (boas.length)
+    out.push({ ico:'📈', title:'Escalar Campanhas com Bom Desempenho',
+      desc:`${boas.map(c=>`"${c.nome.slice(0,22)}${c.nome.length>22?'...':''}"`).join(', ')} com CTR alto e CPP ótimo. Aumentar orçamento 15-20%/semana e criar públicos Lookalike.`,
+      tag:'📈 Escalar' });
+
+  // Fallback
+  if (!out.length)
+    out.push({ ico:'📊', title:'Implementar Testes A/B de Criativos',
+      desc:'Criar 2 variações do anúncio principal: vídeo de 15s focado no problema e imagem estática com depoimento. Rodar 7 dias com 30% do orçamento cada e pausar o de pior CTR.',
+      tag:'🧪 Teste' });
+
+  return out.slice(0,4);
+}
+
+// ═══════════════════════════════════════════════════════
+// FORMATTERS
+// ═══════════════════════════════════════════════════════
+function brl(v) { return 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function n(v)   { return Math.round(v).toLocaleString('pt-BR'); }
+function p(v, suf='', dec=2) { return v.toLocaleString('pt-BR',{minimumFractionDigits:dec,maximumFractionDigits:dec})+suf; }
+
+function ctrClass(v)  { return v>=3?'bg-green':v>=1?'bg-yellow':'bg-red'; }
+function cppClass(v)  { return v<=0?'bg-blue':v<100?'bg-green':v<150?'bg-yellow':'bg-red'; }
+function lpClass(v)   { return v>=80?'bg-green':v>=65?'bg-yellow':'bg-red'; }
+function convClass(v) { return v>=5?'bg-green':v>=2?'bg-yellow':'bg-red'; }
+
+// ═══════════════════════════════════════════════════════
+// RENDER DASHBOARD
+// ═══════════════════════════════════════════════════════
+function render(data, fname) {
+  S.data = data;
+  const { periodo, camps, totals: t, alerts, recs } = data;
+  const now = new Date().toLocaleString('pt-BR');
+
+  // Header meta
+  document.getElementById('ds-filename').textContent = fname;
+  document.getElementById('ds-meta').innerHTML =
+    `<div class="meta-item">📅 <strong>Período:</strong> ${periodo.inicio||'—'} a ${periodo.fim||'—'}</div>
+     <span class="meta-sep">|</span>
+     <div class="meta-item">📋 <strong>Campanhas:</strong> ${camps.length}</div>
+     <span class="meta-sep">|</span>
+     <div class="meta-item">⏱ <strong>Análise:</strong> ${now}</div>`;
+  document.getElementById('ds-gen-time').textContent = `Análise gerada em: ${now}`;
+
+  // KPIs
+  const cpc_m = t.tc > 0 ? t.ti/t.tc : 0;
+  document.getElementById('kpi-grid').innerHTML = [
+    { lbl:'Total Investido',    val:brl(t.ti),             sub:`${camps.length} campanha(s)`,               ico:'💰', kc:'#4f7ef8', bdg:null },
+    { lbl:'Total de Cliques',   val:n(t.tc),               sub:`CPC médio ${brl(cpc_m)}`,                   ico:'🖱️', kc:'#22c55e', bdg:{cls:ctrClass(t.ctr_m),txt:p(t.ctr_m,'%')} },
+    { lbl:'Conversões',         val:n(t.tv),               sub:`pixel de compra`,                           ico:'🛒', kc:'#7c3aed', bdg:null },
+    { lbl:'Custo por Compra',   val:t.cpp_m>0?brl(t.cpp_m):'—', sub:t.cpp_m>150?'⚠ Alto':t.cpp_m>100?'~ Ok':'✓ Ótimo', ico:'🎯', kc:t.cpp_m>150?'#ef4444':t.cpp_m>100?'#f59e0b':'#22c55e', bdg:null },
+    { lbl:'CTR Médio',          val:p(t.ctr_m,'%'),        sub:'benchmark: >1% bom, >3% ótimo',             ico:'📈', kc:t.ctr_m>=3?'#22c55e':t.ctr_m>=1?'#f59e0b':'#ef4444', bdg:null },
+    { lbl:'Conv. Landing Page', val:p(t.conv_m,'%'),       sub:`${n(t.tlp)} views da LP`,                   ico:'🔄', kc:t.conv_m>=5?'#22c55e':t.conv_m>=2?'#f59e0b':'#ef4444', bdg:null },
+  ].map(k => `
+    <div class="kpi" style="--kc:${k.kc}">
+      <span class="kpi-icon">${k.ico}</span>
+      ${k.bdg ? `<span class="kpi-badge ${k.bdg.cls}">${k.bdg.txt}</span>` : ''}
+      <p class="kpi-lbl">${k.lbl}</p>
+      <p class="kpi-val">${k.val}</p>
+      <p class="kpi-sub">${k.sub}</p>
+    </div>`).join('');
+
+  // Funnel
+  const funnelRows = [
+    { lbl:'Impressões', val:t.tIm, pct:100,              col:'#4f7ef8' },
+    { lbl:'Alcance',    val:t.ta,  pct:t.tIm?t.ta/t.tIm*100:0, col:'#06b6d4' },
+    { lbl:'Cliques',    val:t.tc,  pct:t.ctr_m,          col:'#22c55e' },
+    { lbl:'Views LP',   val:t.tlp, pct:t.clp_m,          col:'#f59e0b' },
+    { lbl:'Conversões', val:t.tv,  pct:t.tIm?t.tv/t.tIm*100:0, col:'#7c3aed' },
+  ];
+  document.getElementById('funnel').innerHTML = funnelRows.map(f =>
+    `<div class="fn-row">
+       <span class="fn-lbl">${f.lbl}</span>
+       <div class="fn-wrap">
+         <div class="fn-bar" data-w="${Math.min(f.pct,100).toFixed(1)}" style="width:0%;background:${f.col}">${n(f.val)}</div>
+       </div>
+       <span class="fn-pct">${f.pct.toFixed(1)}%</span>
+     </div>`).join('');
+  requestAnimationFrame(() =>
+    document.querySelectorAll('.fn-bar').forEach(b => { b.style.width = b.dataset.w + '%'; })
+  );
+
+  // Table
+  document.getElementById('tbl-head').innerHTML =
+    `<tr><th>Campanha</th><th>Status</th><th>Investido</th><th>Cliques</th>
+     <th>CTR</th><th>Views LP</th><th>Taxa LP</th><th>Conv.</th><th>CPP</th></tr>`;
+  document.getElementById('tbl-body').innerHTML = camps.map(c => `
+    <tr>
+      <td><strong>${c.nome}</strong></td>
+      <td><span class="badge ${c.status==='active'?'bg-green':'bg-blue'}">${c.status==='active'?'● Ativa':'● '+c.status}</span></td>
+      <td>${brl(c.investido)}</td>
+      <td>${n(c.cliques)}</td>
+      <td><span class="badge ${ctrClass(c.ctr)}">${p(c.ctr,'%')}</span></td>
+      <td>${n(c.lp_views)}</td>
+      <td><span class="badge ${lpClass(c.taxa_clp)}">${p(c.taxa_clp,'%',0)}</span></td>
+      <td>${c.conversoes}</td>
+      <td><span class="badge ${cppClass(c.cpp)}">${c.cpp>0?brl(c.cpp):'—'}</span></td>
+    </tr>`).join('');
+
+  // Alerts
+  document.getElementById('alerts').innerHTML = alerts.map(a =>
+    `<div class="al ${a.t}">
+       <div class="al-icon">${a.ico}</div>
+       <div><p class="al-title">${a.title}</p><p class="al-desc">${a.desc}</p></div>
+     </div>`).join('');
+
+  // Recommendations
+  document.getElementById('recs').innerHTML = recs.map((r,i) =>
+    `<div class="rec">
+       <span class="rec-num">0${i+1}</span>
+       <span class="rec-ico">${r.ico}</span>
+       <p class="rec-title">${r.title}</p>
+       <p class="rec-desc">${r.desc}</p>
+       <span class="rec-tag">${r.tag}</span>
+     </div>`).join('');
+
+  renderCharts(data);
+}
+
+// ═══════════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════════
+function destroyCharts() {
+  for (const k in S.charts) { if (S.charts[k]) { S.charts[k].destroy(); delete S.charts[k]; } }
+}
+
+function renderCharts({ camps, totals: t }) {
+  destroyCharts();
   Chart.defaults.color = '#94a3b8';
   Chart.defaults.borderColor = '#2e334d';
-  Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+  Chart.defaults.font.family = "'Segoe UI',system-ui,sans-serif";
 
-  /* ── Bar Chart: Funil ────────────────────────────────── */
-  new Chart(document.getElementById('barChart'), {
-    type: 'bar',
-    data: {
-      labels: ['Impressões', 'Alcance', 'Cliques no Link', 'Views Landing Page', 'Conversões'],
-      datasets: [{
-        label: 'Volume',
-        data: [campaign.impressoes, campaign.alcance, campaign.cliques, campaign.lp_views, campaign.conversoes],
-        backgroundColor: [
-          col('blue',   '0.7'),
-          col('cyan',   '0.7'),
-          col('green',  '0.7'),
-          col('amber',  '0.7'),
-          col('purple', '0.8'),
-        ],
-        borderColor: [
-          col('blue',   '1'),
-          col('cyan',   '1'),
-          col('green',  '1'),
-          col('amber',  '1'),
-          col('purple', '1'),
-        ],
-        borderWidth: 1.5,
-        borderRadius: 6,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => ' ' + ctx.parsed.y.toLocaleString('pt-BR') + ' itens'
-          }
-        }
+  const ca = (r,a) => `rgba(${r},${a})`;
+  const COLORS = {
+    blue:  ['79,126,248','0,200,248'],
+    green: ['34,197,94','50,220,120'],
+    amber: ['245,158,11','255,180,30'],
+    purp:  ['124,58,237','160,80,255'],
+    red:   ['239,68,68','255,100,100'],
+    cyan:  ['6,182,212','0,210,240'],
+  };
+  const keys = Object.keys(COLORS);
+  const bg  = i => ca(COLORS[keys[i%keys.length]][0],'0.75)').replace(')',');').replace('75)','75)');
+  const brd = i => ca(COLORS[keys[i%keys.length]][0],'1)').replace(')',');').replace('1)','1)');
+
+  // Bar chart
+  const single = camps.length === 1;
+  const barLabels  = single ? ['Impressões','Alcance','Cliques','Views LP','Conversões']
+                             : camps.map(c => c.nome.slice(0,18)+(c.nome.length>18?'…':''));
+  const barDatasets = single
+    ? [{ label:'Volume',
+         data:[t.tIm,t.ta,t.tc,t.tlp,t.tv],
+         backgroundColor:[
+           `rgba(79,126,248,0.75)`,`rgba(6,182,212,0.75)`,
+           `rgba(34,197,94,0.75)`,`rgba(245,158,11,0.75)`,`rgba(124,58,237,0.75)`],
+         borderColor:[
+           `rgba(79,126,248,1)`,`rgba(6,182,212,1)`,
+           `rgba(34,197,94,1)`,`rgba(245,158,11,1)`,`rgba(124,58,237,1)`],
+         borderWidth:1.5,borderRadius:5 }]
+    : [
+        { label:'Cliques',    data:camps.map(c=>c.cliques),    backgroundColor:`rgba(79,126,248,0.75)`, borderColor:`rgba(79,126,248,1)`, borderWidth:1.5,borderRadius:4 },
+        { label:'Views LP',   data:camps.map(c=>c.lp_views),  backgroundColor:`rgba(245,158,11,0.75)`, borderColor:`rgba(245,158,11,1)`, borderWidth:1.5,borderRadius:4 },
+        { label:'Conversões', data:camps.map(c=>c.conversoes),backgroundColor:`rgba(124,58,237,0.75)`, borderColor:`rgba(124,58,237,1)`, borderWidth:1.5,borderRadius:4 },
+      ];
+
+  S.charts.bar = new Chart(document.getElementById('barChart'), {
+    type:'bar', data:{ labels:barLabels, datasets:barDatasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ display:!single, labels:{ padding:10, font:{size:10}, boxWidth:10 }},
+        tooltip:{ callbacks:{ label: ctx => ' '+ctx.parsed.y.toLocaleString('pt-BR') }}
       },
-      scales: {
-        x: { grid: { color: 'rgba(46,51,77,.5)' } },
-        y: {
-          grid: { color: 'rgba(46,51,77,.5)' },
-          ticks: {
-            callback: v => v >= 1000 ? (v/1000).toFixed(1) + 'k' : v
-          }
-        }
+      scales:{
+        x:{ grid:{color:'rgba(46,51,77,.5)'}, ticks:{font:{size:10}} },
+        y:{ grid:{color:'rgba(46,51,77,.5)'}, ticks:{callback:v=>v>=1000?(v/1000).toFixed(1)+'k':v, font:{size:10}}}
       }
     }
   });
 
-  /* ── Doughnut: Custo ─────────────────────────────────── */
-  const custoCliques  = campaign.cliques * 1.626766;
-  const custoRestante = campaign.investido - custoCliques;
+  // Doughnut
+  const dLabels = single
+    ? ['Custo em Conversões','Restante do Investimento']
+    : camps.map(c => c.nome.slice(0,20)+(c.nome.length>20?'…':''));
+  const dData = single
+    ? [+(camps[0].conversoes*camps[0].cpp).toFixed(2), Math.max(0,+(t.ti - camps[0].conversoes*camps[0].cpp).toFixed(2))]
+    : camps.map(c => c.investido);
+  const dBg  = dData.map((_,i) => `rgba(${COLORS[keys[i%keys.length]][0]},0.75)`);
+  const dBrd = dData.map((_,i) => `rgba(${COLORS[keys[i%keys.length]][0]},1)`);
 
-  new Chart(document.getElementById('doughnutChart'), {
-    type: 'doughnut',
-    data: {
-      labels: ['Custo em Cliques', 'CPM / Alcance', 'Conversões (4×R$109,40)'],
-      datasets: [{
-        data: [
-          parseFloat(custoCliques.toFixed(2)),
-          parseFloat((campaign.investido - campaign.conversoes * 109.40 - custoCliques < 0 ? 0 : campaign.investido - campaign.conversoes * 109.40 - custoCliques).toFixed(2)),
-          campaign.conversoes * 109.40,
-        ],
-        backgroundColor: [
-          col('blue',   '0.7'),
-          col('cyan',   '0.4'),
-          col('purple', '0.7'),
-        ],
-        borderColor: [
-          col('blue',   '1'),
-          col('cyan',   '1'),
-          col('purple', '1'),
-        ],
-        borderWidth: 1.5,
-        hoverOffset: 8,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '68%',
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { padding: 14, font: { size: 11 }, boxWidth: 12 }
-        },
-        tooltip: {
-          callbacks: {
-            label: ctx => ' R$ ' + ctx.parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-          }
-        }
+  S.charts.doughnut = new Chart(document.getElementById('doughnutChart'), {
+    type:'doughnut', data:{ labels:dLabels, datasets:[{ data:dData, backgroundColor:dBg, borderColor:dBrd, borderWidth:1.5, hoverOffset:8 }]},
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'65%',
+      plugins:{
+        legend:{ position:'bottom', labels:{ padding:10, font:{size:10}, boxWidth:10 }},
+        tooltip:{ callbacks:{ label: ctx => ' R$ '+ctx.parsed.toLocaleString('pt-BR',{minimumFractionDigits:2}) }}
       }
     }
   });
+}
 
-  /* ── Funil visual ────────────────────────────────────── */
-  const funnelData = [
-    { label: 'Impressões',   value: campaign.impressoes, pct: 100,                                              color: '#4f7ef8' },
-    { label: 'Alcance',      value: campaign.alcance,    pct: (campaign.alcance    / campaign.impressoes * 100), color: '#06b6d4' },
-    { label: 'Cliques',      value: campaign.cliques,    pct: (campaign.cliques    / campaign.impressoes * 100), color: '#22c55e' },
-    { label: 'Views LP',     value: campaign.lp_views,   pct: (campaign.lp_views   / campaign.impressoes * 100), color: '#f59e0b' },
-    { label: 'Conversões',   value: campaign.conversoes, pct: (campaign.conversoes / campaign.impressoes * 100), color: '#7c3aed' },
+// ═══════════════════════════════════════════════════════
+// PDF EXPORT
+// ═══════════════════════════════════════════════════════
+function exportPDF() {
+  const data = S.data; if (!data) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const W = 210, now = new Date().toLocaleString('pt-BR');
+  const { periodo, camps, totals: t, alerts, recs } = data;
+  let y = 0;
+
+  // Header
+  doc.setFillColor(20,60,120); doc.rect(0,0,W,28,'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  doc.text('RELATORIO DE CAMPANHAS - META ADS', 14, 12);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text('Digitalizando Negocios  |  Analise de Performance', 14, 19);
+  doc.text(now, W-14, 19, { align:'right' });
+  y = 36;
+
+  doc.setTextColor(80,80,80); doc.setFontSize(8);
+  doc.text(`Periodo: ${periodo.inicio||''} a ${periodo.fim||''}  |  Campanhas: ${camps.length}  |  Arquivo: ${S.file?.name||'N/A'}`, 14, y);
+  y += 9;
+
+  // KPI table
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,60,120);
+  doc.text('RESUMO EXECUTIVO', 14, y); y += 3;
+  doc.autoTable({
+    startY: y,
+    head:[['Metrica','Valor','Avaliacao']],
+    body:[
+      ['Total Investido',          `R$ ${t.ti.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, ''],
+      ['Total de Cliques',         t.tc.toLocaleString('pt-BR'), ''],
+      ['Alcance Total',            t.ta.toLocaleString('pt-BR'), ''],
+      ['Impressoes',               t.tIm.toLocaleString('pt-BR'), ''],
+      ['Conversoes (Compras)',      t.tv.toString(), ''],
+      ['Custo por Compra (CPP)',    t.cpp_m>0?`R$ ${t.cpp_m.toLocaleString('pt-BR',{minimumFractionDigits:2})}`:'—', t.cpp_m>150?'ALTO':t.cpp_m>100?'MODERADO':'OTIMO'],
+      ['CTR Medio',                `${t.ctr_m.toLocaleString('pt-BR',{minimumFractionDigits:2})}%`, t.ctr_m>=3?'EXCELENTE':t.ctr_m>=1?'BOM':'CRITICO'],
+      ['Taxa Conversao Landing Page',`${t.conv_m.toLocaleString('pt-BR',{minimumFractionDigits:1})}%`, t.conv_m>=5?'EXCELENTE':t.conv_m>=2?'MODERADO':'CRITICO'],
+      ['Taxa Click -> Landing Page', `${t.clp_m.toLocaleString('pt-BR',{minimumFractionDigits:0})}%`, t.clp_m>=80?'BOM':t.clp_m>=65?'ATENCAO':'CRITICO'],
+    ],
+    theme:'grid',
+    headStyles:{ fillColor:[20,60,120], textColor:255, fontSize:8, fontStyle:'bold' },
+    bodyStyles:{ fontSize:8 },
+    columnStyles:{ 0:{fontStyle:'bold',cellWidth:72}, 2:{fontStyle:'bold',cellWidth:28} },
+    alternateRowStyles:{ fillColor:[245,247,255] },
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  // Campaigns detail
+  if (y > 220) { doc.addPage(); y = 20; }
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,60,120);
+  doc.text('DETALHAMENTO POR CAMPANHA', 14, y); y += 3;
+  doc.autoTable({
+    startY: y,
+    head:[['Campanha','Invest.','Cliques','CTR','Views LP','Conv.','CPP']],
+    body: camps.map(c => [
+      c.nome.slice(0,33),
+      `R$ ${c.investido.toLocaleString('pt-BR',{minimumFractionDigits:2})}`,
+      c.cliques.toLocaleString('pt-BR'),
+      `${c.ctr.toLocaleString('pt-BR',{minimumFractionDigits:2})}%`,
+      c.lp_views.toLocaleString('pt-BR'),
+      c.conversoes.toString(),
+      c.cpp>0?`R$ ${c.cpp.toLocaleString('pt-BR',{minimumFractionDigits:2})}`:'—',
+    ]),
+    theme:'grid',
+    headStyles:{ fillColor:[20,60,120], textColor:255, fontSize:8, fontStyle:'bold' },
+    bodyStyles:{ fontSize:8 },
+    alternateRowStyles:{ fillColor:[245,247,255] },
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  // Alerts
+  if (y > 230) { doc.addPage(); y = 20; }
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,60,120);
+  doc.text('ALERTAS E SINALIZACOES', 14, y); y += 6;
+  alerts.slice(0,8).forEach(a => {
+    if (y > 265) { doc.addPage(); y = 20; }
+    const fc = a.t==='green'?[220,250,230]:a.t==='yellow'?[255,248,210]:[255,225,225];
+    const tc2 = a.t==='green'?[20,120,40]:a.t==='yellow'?[150,100,0]:[180,40,40];
+    doc.setFillColor(...fc); doc.rect(12,y-4,W-24,13,'F');
+    doc.setTextColor(...tc2); doc.setFont('helvetica','bold'); doc.setFontSize(8);
+    doc.text(a.title, 15, y+1);
+    doc.setTextColor(50,50,50); doc.setFont('helvetica','normal');
+    const ln = doc.splitTextToSize(a.desc, W-32);
+    doc.text(ln[0], 15, y+6.5); y += 16;
+  });
+
+  // Recs
+  if (y > 230) { doc.addPage(); y = 20; }
+  y += 2;
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,60,120);
+  doc.text('RECOMENDACOES ESTRATEGICAS', 14, y); y += 6;
+  recs.forEach((r,i) => {
+    if (y > 258) { doc.addPage(); y = 20; }
+    doc.setFillColor(235,240,255);
+    doc.setTextColor(20,60,120); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text(`${i+1}. ${r.title}`, 15, y+1);
+    doc.setTextColor(50,50,50); doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    const ls = doc.splitTextToSize(r.desc, W-30);
+    ls.slice(0,2).forEach((l,li) => doc.text(l,15,y+7+li*5));
+    y += 7 + Math.min(ls.length,2)*5 + 5;
+  });
+
+  // Footer all pages
+  const pg = doc.getNumberOfPages();
+  for (let i=1;i<=pg;i++) {
+    doc.setPage(i);
+    doc.setFillColor(20,60,120); doc.rect(0,288,W,9,'F');
+    doc.setTextColor(200,210,255); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(`Pagina ${i} de ${pg}  |  Gerado em: ${now}  |  Meta Ads Analytics - Digitalizando Negocios`, W/2, 293.5,{align:'center'});
+  }
+
+  doc.save(`relatorio-meta-ads-${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// ═══════════════════════════════════════════════════════
+// LOADING ANIMATION
+// ═══════════════════════════════════════════════════════
+function runLoader(cb) {
+  screen('screen-loading');
+  const steps = [
+    [20,'Lendo arquivo CSV...'],
+    [40,'Identificando colunas...'],
+    [60,'Calculando métricas...'],
+    [80,'Gerando alertas automáticos...'],
+    [100,'Montando dashboard...'],
   ];
+  const items = document.querySelectorAll('.ld-step-item');
+  items.forEach(el => { el.classList.remove('active','done'); });
+  document.getElementById('prog-bar').style.width = '0%';
+  let i = 0;
+  function tick() {
+    if (i > 0) { items[i-1].classList.replace('active','done'); items[i-1].querySelector('.si').textContent = '✓'; }
+    if (i < steps.length) {
+      const [pct, txt] = steps[i];
+      document.getElementById('prog-bar').style.width = pct+'%';
+      document.getElementById('ld-text').textContent = txt;
+      items[i].classList.add('active');
+      i++;
+      setTimeout(tick, i===steps.length ? 550 : 280+Math.random()*160);
+    } else {
+      setTimeout(cb, 350);
+    }
+  }
+  setTimeout(tick, 120);
+}
 
-  const funnelEl = document.getElementById('funnel');
-  funnelData.forEach(step => {
-    const div = document.createElement('div');
-    div.className = 'funnel-step';
-    div.innerHTML = `
-      <span class="funnel-label">${step.label}</span>
-      <div class="funnel-bar-wrap">
-        <div class="funnel-bar" data-w="${step.pct}" style="width:0%;background:${step.color}">
-          ${step.value.toLocaleString('pt-BR')}
-        </div>
-      </div>
-      <span class="funnel-pct">${step.pct.toFixed(1)}%</span>
-    `;
-    funnelEl.appendChild(div);
-  });
+// ═══════════════════════════════════════════════════════
+// FILE HANDLING
+// ═══════════════════════════════════════════════════════
+function setFile(file) {
+  if (!file || !file.name.toLowerCase().endsWith('.csv')) {
+    alert('Selecione um arquivo .csv válido do Meta Ads.'); return;
+  }
+  S.file = file;
+  const el = document.getElementById('file-name');
+  el.textContent = '📄 '+file.name; el.style.display = 'block';
+  document.getElementById('btn-analyze').disabled = false;
+}
 
-  // Animate bars on load
-  requestAnimationFrame(() => {
-    document.querySelectorAll('.funnel-bar').forEach(bar => {
-      const w = parseFloat(bar.dataset.w);
-      bar.style.width = w + '%';
+function analyze() {
+  if (!S.file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const raw = e.target.result;
+    runLoader(() => {
+      try {
+        const parsed = parseCSV(raw);
+        if (!parsed || !parsed.rows.length) {
+          screen('screen-upload');
+          alert('Não foi possível processar o CSV. Verifique se é um export válido do Meta Ads.');
+          return;
+        }
+        const data = process(parsed);
+        render(data, S.file.name);
+        screen('screen-dashboard');
+      } catch(err) {
+        console.error(err);
+        screen('screen-upload');
+        alert('Erro ao processar: ' + err.message);
+      }
     });
+  };
+  reader.readAsText(S.file, 'UTF-8');
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  const dz = document.getElementById('drop-zone');
+  const fi = document.getElementById('file-input');
+
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('over');
+    if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
   });
+  fi.addEventListener('change', e => { if (e.target.files[0]) setFile(e.target.files[0]); });
+  document.getElementById('btn-analyze').addEventListener('click', analyze);
+
+  document.getElementById('btn-new').addEventListener('click', () => {
+    destroyCharts();
+    S.file = null; S.data = null;
+    fi.value = '';
+    document.getElementById('file-name').style.display = 'none';
+    document.getElementById('btn-analyze').disabled = true;
+    screen('screen-upload');
+  });
+
+  document.getElementById('btn-pdf').addEventListener('click', exportPDF);
+});
 </script>
 </body>
 </html>
