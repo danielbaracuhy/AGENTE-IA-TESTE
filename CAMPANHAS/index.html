@@ -401,7 +401,7 @@
     <div class="nav-right">
       <select id="acc-sel" class="sel" onchange="onAccChange()" title="Conta de anúncios"></select>
       <select id="period-sel" class="sel" onchange="onPeriodChange()">
-        <option value="camp01" selected>12/05 – 25/05 (CAMP 01)</option>
+        <option value="camp01" selected>12/05 – 26/05 (CAMP 01)</option>
         <option value="last_7d">Últimos 7 dias</option>
         <option value="last_14d">Últimos 14 dias</option>
         <option value="last_30d">Últimos 30 dias</option>
@@ -625,18 +625,18 @@
     try {
       // camp01 usa intervalo fixo; demais usam date_preset relativo
       const timeParams = S.period === 'camp01'
-        ? { time_range: JSON.stringify({ since: '2026-05-12', until: '2026-05-25' }) }
+        ? { time_range: JSON.stringify({ since: '2026-05-12', until: '2026-05-26' }) }
         : { date_preset: S.period };
 
       const [ins, cins, camps] = await Promise.all([
         api(`/${S.accId}/insights`, {
           ...timeParams,
-          fields: 'spend,impressions,reach,inline_link_clicks,inline_link_click_ctr,cpm,frequency,actions,cost_per_action_type',
+          fields: 'spend,impressions,reach,outbound_clicks,outbound_clicks_ctr,cpm,frequency,actions,cost_per_action_type',
           level: 'account'
         }),
         api(`/${S.accId}/insights`, {
           ...timeParams,
-          fields: 'campaign_id,campaign_name,spend,impressions,reach,inline_link_clicks,inline_link_click_ctr,cpm,actions,cost_per_action_type',
+          fields: 'campaign_id,campaign_name,spend,impressions,reach,outbound_clicks,outbound_clicks_ctr,cpm,actions,cost_per_action_type',
           level: 'campaign', limit: 25
         }),
         api(`/${S.accId}/campaigns`, {
@@ -663,27 +663,39 @@
   }
 
   // ── extraction helpers ───────────────────────────────────────
-  const CONV_TYPES = [
-    'offsite_conversion.fb_pixel_purchase','purchase','omni_purchase',
-    'lead','complete_registration','offsite_conversion.fb_pixel_lead'
-  ];
+  // outbound_clicks e outbound_clicks_ctr chegam como array [{action_type, value}]
+  function obClicks(d) {
+    const arr = d?.outbound_clicks;
+    if (!arr) return 0;
+    const item = Array.isArray(arr) ? arr.find(x => x.action_type === 'outbound_click') : null;
+    return item ? parseFloat(item.value) || 0 : 0;
+  }
 
+  function obCTR(d) {
+    const arr = d?.outbound_clicks_ctr;
+    if (!arr) return 0;
+    const item = Array.isArray(arr) ? arr.find(x => x.action_type === 'outbound_click') : null;
+    return item ? parseFloat(item.value) || 0 : 0;
+  }
+
+  // apenas pixel purchase confirma venda real
   function convTotal(actions) {
     if (!actions) return 0;
-    return actions.filter(a => CONV_TYPES.includes(a.action_type))
-                  .reduce((s, a) => s + (parseFloat(a.value) || 0), 0);
+    return actions
+      .filter(a => a.action_type === 'offsite_conversion.fb_pixel_purchase')
+      .reduce((s, a) => s + (parseFloat(a.value) || 0), 0);
   }
 
   function convCost(cpa) {
     if (!cpa) return 0;
-    for (const i of cpa) if (CONV_TYPES.includes(i.action_type)) return parseFloat(i.value) || 0;
-    return 0;
+    const item = cpa.find(i => i.action_type === 'offsite_conversion.fb_pixel_purchase');
+    return item ? parseFloat(item.value) || 0 : 0;
   }
 
   // ── render ───────────────────────────────────────────────────
   function render() {
     const acc = S.accounts.find(a => a.id === S.accId);
-    const label = { camp01:'12/05 a 25/05/2026 (CAMP 01)', last_7d:'últimos 7 dias', last_14d:'últimos 14 dias', last_30d:'últimos 30 dias' };
+    const label = { camp01:'12/05 a 26/05/2026 (CAMP 01)', last_7d:'últimos 7 dias', last_14d:'últimos 14 dias', last_30d:'últimos 30 dias' };
     document.getElementById('acc-title').textContent = acc?.name || 'Dashboard';
     document.getElementById('acc-sub').textContent =
       `Métricas dos ${label[S.period]} · Atualizado às ${fmtTime(S.ts)}`;
@@ -705,8 +717,8 @@
     const spend = +d.spend || 0;
     const impr  = +d.impressions || 0;
     const reach = +d.reach || 0;
-    const clicks= +d.inline_link_clicks || 0;
-    const ctr   = +d.inline_link_click_ctr || 0;
+    const clicks= obClicks(d);
+    const ctr   = obCTR(d);
     const cpm   = +d.cpm || 0;
     const convs = convTotal(d.actions);
     const cpc   = clicks ? spend / clicks : 0;
@@ -758,7 +770,7 @@
     const d = S.insights; if (!d) return;
     const impr  = +d.impressions || 0;
     const reach = +d.reach || 0;
-    const clicks= +d.inline_link_clicks || 0;
+    const clicks= obClicks(d);
     const convs = convTotal(d.actions);
     const max   = impr || 1;
 
@@ -794,7 +806,7 @@
     const data = S.campInsights; if (!data.length) return;
     const labels = data.map(c => trunc(c.campaign_name, 18));
     const spends = data.map(c => +(c.spend) || 0);
-    const ctrs   = data.map(c => +(c.inline_link_click_ctr) || 0);
+    const ctrs   = data.map(c => obCTR(c));
     const ctx    = document.getElementById('chart-camp').getContext('2d');
     if (S.chart) S.chart.destroy();
     S.chart = new Chart(ctx, {
@@ -844,7 +856,7 @@
     }
     tbody.innerHTML = data.map(c => {
       const spend = +(c.spend)||0, impr=+(c.impressions)||0,
-            clicks=+(c.inline_link_clicks)||0, ctr=+(c.inline_link_click_ctr)||0, cpm=+(c.cpm)||0;
+            clicks=obClicks(c), ctr=obCTR(c), cpm=+(c.cpm)||0;
       const convs = convTotal(c.actions), cpc = convCost(c.cost_per_action_type);
       const st = c.effective_status;
       const badge = st === 'ACTIVE'
@@ -868,8 +880,8 @@
 
   function renderAlerts() {
     const d = S.insights; if (!d) return;
-    const spend= +d.spend||0, ctr=+d.inline_link_click_ctr||0, cpm=+d.cpm||0;
-    const clicks=+d.inline_link_clicks||0, convs=convTotal(d.actions), freq=+d.frequency||0;
+    const spend= +d.spend||0, ctr=obCTR(d), cpm=+d.cpm||0;
+    const clicks=obClicks(d), convs=convTotal(d.actions), freq=+d.frequency||0;
     const al = [];
 
     if (spend === 0)
@@ -908,8 +920,8 @@
 
   function renderRecs() {
     const d = S.insights; if (!d) return;
-    const spend= +d.spend||0, ctr=+d.inline_link_click_ctr||0, cpm=+d.cpm||0;
-    const clicks=+d.inline_link_clicks||0, convs=convTotal(d.actions);
+    const spend= +d.spend||0, ctr=obCTR(d), cpm=+d.cpm||0;
+    const clicks=obClicks(d), convs=convTotal(d.actions);
     const cpconv=convCost(d.cost_per_action_type), freq=+d.frequency||0;
     const nc = S.campInsights.length;
     const rs = [];
