@@ -622,7 +622,7 @@
     if (!S.accId) return;
     loading('Buscando métricas…');
     try {
-      const [ins, cins] = await Promise.all([
+      const [ins, cins, camps] = await Promise.all([
         api(`/${S.accId}/insights`, {
           date_preset: S.period,
           fields: 'spend,impressions,reach,clicks,ctr,cpm,frequency,actions,cost_per_action_type',
@@ -630,12 +630,22 @@
         }),
         api(`/${S.accId}/insights`, {
           date_preset: S.period,
-          fields: 'campaign_id,campaign_name,spend,impressions,reach,clicks,ctr,cpm,actions,cost_per_action_type,effective_status',
+          fields: 'campaign_id,campaign_name,spend,impressions,reach,clicks,ctr,cpm,actions,cost_per_action_type',
           level: 'campaign', limit: 25
+        }),
+        api(`/${S.accId}/campaigns`, {
+          fields: 'id,effective_status',
+          limit: 50
         })
       ]);
+      // effective_status vem do endpoint /campaigns, não do /insights
+      const statusMap = {};
+      (camps.data || []).forEach(c => { statusMap[c.id] = c.effective_status; });
       S.insights     = ins.data?.[0] || null;
-      S.campInsights = cins.data || [];
+      S.campInsights = (cins.data || []).map(c => ({
+        ...c,
+        effective_status: statusMap[c.campaign_id] || 'UNKNOWN'
+      }));
       S.ts = new Date();
       render();
       toast('Dados atualizados!', 'ok');
