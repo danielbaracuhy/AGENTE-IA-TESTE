@@ -401,9 +401,10 @@
     <div class="nav-right">
       <select id="acc-sel" class="sel" onchange="onAccChange()" title="Conta de anúncios"></select>
       <select id="period-sel" class="sel" onchange="onPeriodChange()">
+        <option value="camp01" selected>12/05 – 25/05 (CAMP 01)</option>
         <option value="last_7d">Últimos 7 dias</option>
         <option value="last_14d">Últimos 14 dias</option>
-        <option value="last_30d" selected>Últimos 30 dias</option>
+        <option value="last_30d">Últimos 30 dias</option>
       </select>
       <button class="btn-sm btn-pdf" onclick="exportPDF()">
         <i class="fa-solid fa-file-pdf"></i><span>Exportar PDF</span>
@@ -539,7 +540,7 @@
     accId: null,
     insights: null,
     campInsights: [],
-    period: 'last_30d',
+    period: 'camp01',
     chart: null,
     ts: null
   };
@@ -622,15 +623,20 @@
     if (!S.accId) return;
     loading('Buscando métricas…');
     try {
+      // camp01 usa intervalo fixo; demais usam date_preset relativo
+      const timeParams = S.period === 'camp01'
+        ? { time_range: JSON.stringify({ since: '2026-05-12', until: '2026-05-25' }) }
+        : { date_preset: S.period };
+
       const [ins, cins, camps] = await Promise.all([
         api(`/${S.accId}/insights`, {
-          date_preset: S.period,
-          fields: 'spend,impressions,reach,clicks,ctr,cpm,frequency,actions,cost_per_action_type',
+          ...timeParams,
+          fields: 'spend,impressions,reach,inline_link_clicks,inline_link_click_ctr,cpm,frequency,actions,cost_per_action_type',
           level: 'account'
         }),
         api(`/${S.accId}/insights`, {
-          date_preset: S.period,
-          fields: 'campaign_id,campaign_name,spend,impressions,reach,clicks,ctr,cpm,actions,cost_per_action_type',
+          ...timeParams,
+          fields: 'campaign_id,campaign_name,spend,impressions,reach,inline_link_clicks,inline_link_click_ctr,cpm,actions,cost_per_action_type',
           level: 'campaign', limit: 25
         }),
         api(`/${S.accId}/campaigns`, {
@@ -677,7 +683,7 @@
   // ── render ───────────────────────────────────────────────────
   function render() {
     const acc = S.accounts.find(a => a.id === S.accId);
-    const label = { last_7d:'últimos 7 dias', last_14d:'últimos 14 dias', last_30d:'últimos 30 dias' };
+    const label = { camp01:'12/05 a 25/05/2026 (CAMP 01)', last_7d:'últimos 7 dias', last_14d:'últimos 14 dias', last_30d:'últimos 30 dias' };
     document.getElementById('acc-title').textContent = acc?.name || 'Dashboard';
     document.getElementById('acc-sub').textContent =
       `Métricas dos ${label[S.period]} · Atualizado às ${fmtTime(S.ts)}`;
@@ -699,8 +705,8 @@
     const spend = +d.spend || 0;
     const impr  = +d.impressions || 0;
     const reach = +d.reach || 0;
-    const clicks= +d.clicks || 0;
-    const ctr   = +d.ctr || 0;
+    const clicks= +d.inline_link_clicks || 0;
+    const ctr   = +d.inline_link_click_ctr || 0;
     const cpm   = +d.cpm || 0;
     const convs = convTotal(d.actions);
     const cpc   = clicks ? spend / clicks : 0;
@@ -752,7 +758,7 @@
     const d = S.insights; if (!d) return;
     const impr  = +d.impressions || 0;
     const reach = +d.reach || 0;
-    const clicks= +d.clicks || 0;
+    const clicks= +d.inline_link_clicks || 0;
     const convs = convTotal(d.actions);
     const max   = impr || 1;
 
@@ -788,7 +794,7 @@
     const data = S.campInsights; if (!data.length) return;
     const labels = data.map(c => trunc(c.campaign_name, 18));
     const spends = data.map(c => +(c.spend) || 0);
-    const ctrs   = data.map(c => +(c.ctr) || 0);
+    const ctrs   = data.map(c => +(c.inline_link_click_ctr) || 0);
     const ctx    = document.getElementById('chart-camp').getContext('2d');
     if (S.chart) S.chart.destroy();
     S.chart = new Chart(ctx, {
@@ -838,7 +844,7 @@
     }
     tbody.innerHTML = data.map(c => {
       const spend = +(c.spend)||0, impr=+(c.impressions)||0,
-            clicks=+(c.clicks)||0, ctr=+(c.ctr)||0, cpm=+(c.cpm)||0;
+            clicks=+(c.inline_link_clicks)||0, ctr=+(c.inline_link_click_ctr)||0, cpm=+(c.cpm)||0;
       const convs = convTotal(c.actions), cpc = convCost(c.cost_per_action_type);
       const st = c.effective_status;
       const badge = st === 'ACTIVE'
@@ -862,8 +868,8 @@
 
   function renderAlerts() {
     const d = S.insights; if (!d) return;
-    const spend= +d.spend||0, ctr=+d.ctr||0, cpm=+d.cpm||0;
-    const clicks=+d.clicks||0, convs=convTotal(d.actions), freq=+d.frequency||0;
+    const spend= +d.spend||0, ctr=+d.inline_link_click_ctr||0, cpm=+d.cpm||0;
+    const clicks=+d.inline_link_clicks||0, convs=convTotal(d.actions), freq=+d.frequency||0;
     const al = [];
 
     if (spend === 0)
@@ -902,8 +908,8 @@
 
   function renderRecs() {
     const d = S.insights; if (!d) return;
-    const spend= +d.spend||0, ctr=+d.ctr||0, cpm=+d.cpm||0;
-    const clicks=+d.clicks||0, convs=convTotal(d.actions);
+    const spend= +d.spend||0, ctr=+d.inline_link_click_ctr||0, cpm=+d.cpm||0;
+    const clicks=+d.inline_link_clicks||0, convs=convTotal(d.actions);
     const cpconv=convCost(d.cost_per_action_type), freq=+d.frequency||0;
     const nc = S.campInsights.length;
     const rs = [];
