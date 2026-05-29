@@ -360,6 +360,41 @@
       .login-wrap { padding:30px 20px; }
       .login-features { grid-template-columns:1fr; }
     }
+
+    /* ── MODAL CRIAR CAMPANHA ─────────────────────────────── */
+    #mc-modal{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.75);backdrop-filter:blur(4px)}
+    .mc-box{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);width:100%;max-width:600px;max-height:90vh;overflow-y:auto}
+    .mc-top{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg-card);z-index:1}
+    .mc-top h2{font-size:15px;font-weight:700;color:var(--text-primary)}
+    .mc-close{background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:17px;line-height:1;padding:4px 7px;border-radius:7px;transition:var(--t)}
+    .mc-close:hover{color:var(--text-primary);background:var(--bg-hover)}
+    .mc-body{padding:20px 22px;display:flex;flex-direction:column;gap:14px}
+    .mc-row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .mc-field{display:flex;flex-direction:column;gap:5px}
+    .mc-field label{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-secondary);font-weight:600}
+    .mc-field input[type=text],.mc-field input[type=number],.mc-field input[type=file],.mc-field select,.mc-field textarea{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-family:'Inter',-apple-system,sans-serif;font-size:13px;padding:8px 11px;outline:none;width:100%;transition:var(--t)}
+    .mc-field input:focus,.mc-field select:focus,.mc-field textarea:focus{border-color:var(--blue)}
+    .mc-field textarea{resize:vertical;min-height:72px}
+    .mc-field input[type=file]{cursor:pointer;padding:7px 11px}
+    .mc-field select option{background:var(--bg-secondary)}
+    .mc-div{height:1px;background:var(--border)}
+    .mc-sec{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-secondary);font-weight:600}
+    .mc-chkgroup{display:flex;gap:18px}
+    .mc-chk{display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text-primary)}
+    .mc-chk input[type=checkbox]{width:15px;height:15px;accent-color:var(--blue);cursor:pointer}
+    #mc-status{margin:0 22px 14px;padding:10px 13px;border-radius:var(--radius-sm);font-size:13px;display:none;line-height:1.5}
+    #mc-status.info{background:rgba(24,119,242,.1);color:var(--blue-light);border:1px solid rgba(24,119,242,.3)}
+    #mc-status.success{background:rgba(0,214,143,.1);color:var(--green);border:1px solid rgba(0,214,143,.3)}
+    #mc-status.error{background:rgba(255,71,87,.1);color:var(--red);border:1px solid rgba(255,71,87,.3)}
+    .mc-foot{padding:13px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:9px;position:sticky;bottom:0;background:var(--bg-card)}
+    .mc-btn-cancel{background:var(--bg-hover);border:1px solid var(--border);color:var(--text-primary);padding:8px 16px;border-radius:var(--radius-sm);font-family:'Inter',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:var(--t)}
+    .mc-btn-cancel:hover{border-color:var(--red);color:var(--red)}
+    .mc-btn-criar{background:var(--grad-blue);border:none;color:#fff;padding:8px 18px;border-radius:var(--radius-sm);font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:var(--t)}
+    .mc-btn-criar:hover{opacity:.88}
+    .mc-btn-criar:disabled{opacity:.4;cursor:not-allowed}
+    .btn-criar-camp{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary);border-radius:var(--radius-sm);font-family:'Inter',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:var(--t);white-space:nowrap}
+    .btn-criar-camp:hover{border-color:var(--blue);background:rgba(24,119,242,.1);color:var(--blue-light)}
+    @media(max-width:520px){.mc-row2{grid-template-columns:1fr}}
   </style>
 </head>
 
@@ -375,6 +410,12 @@
     <button class="btn-meta" onclick="loginMeta()">
       <i class="fa-brands fa-meta"></i> Conectar com Meta Ads
     </button>
+
+    <div style="margin-top:12px;display:flex;justify-content:center">
+      <button class="btn-criar-camp" onclick="abrirModalCampanha()">
+        ➕ Criar Campanha no Meta
+      </button>
+    </div>
 
     <div class="login-features">
       <div class="feat"><i class="fa-solid fa-shield-check"></i><span>Autenticação segura OAuth 2.0</span></div>
@@ -406,6 +447,9 @@
         <option value="last_14d">Últimos 14 dias</option>
         <option value="last_30d">Últimos 30 dias</option>
       </select>
+      <button class="btn-criar-camp" onclick="abrirModalCampanha()">
+        <i class="fa-solid fa-plus"></i><span>Criar Campanha</span>
+      </button>
       <button class="btn-sm btn-pdf" onclick="exportPDF()">
         <i class="fa-solid fa-file-pdf"></i><span>Exportar PDF</span>
       </button>
@@ -1036,6 +1080,193 @@
     el.classList.add('show');
     _tt = setTimeout(() => el.classList.remove('show'), 3800);
   }
+
+  // ═══════════════════════════════════════════════════════
+  // MODAL CRIAR CAMPANHA
+  // ═══════════════════════════════════════════════════════
+  function abrirModalCampanha() {
+    document.getElementById('mc-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  function fecharModalCampanha() {
+    document.getElementById('mc-modal').style.display = 'none';
+    document.body.style.overflow = '';
+    setMcStatus('', '');
+  }
+  function onMcIntencao() {
+    const isWA = document.getElementById('mc-intencao').value === 'whatsapp';
+    document.getElementById('mc-grp-link').style.display = isWA ? 'none' : '';
+    document.getElementById('mc-grp-cta').style.display  = isWA ? 'none' : '';
+  }
+  function setMcStatus(type, html) {
+    const el = document.getElementById('mc-status');
+    el.className = type; el.innerHTML = html;
+    el.style.display = html ? 'block' : 'none';
+  }
+  function enviarCampanhaMeta(e) {
+    e.preventDefault();
+    const imgFile = document.getElementById('mc-img').files[0];
+    if (!imgFile) { setMcStatus('error', 'Selecione uma imagem para o criativo.'); return; }
+    const intencao = document.getElementById('mc-intencao').value;
+    const isWA = intencao === 'whatsapp';
+    const fr = new FileReader();
+    fr.onload = ev => {
+      const b64 = ev.target.result.split(',')[1];
+      const cidadesRaw = document.getElementById('mc-cidades').value.trim();
+      const cidades = cidadesRaw ? cidadesRaw.split(',').map(c => c.trim()).filter(Boolean) : [];
+      const generoVal = document.getElementById('mc-genero').value;
+      const generos = generoVal ? [Number(generoVal)] : [];
+      const plataformas = ['mc-plat-fb','mc-plat-ig']
+        .filter(id => document.getElementById(id).checked)
+        .map(id => document.getElementById(id).value);
+      const raioRaw = document.getElementById('mc-raio').value;
+      const payload = {
+        nome:            document.getElementById('mc-nome').value.trim(),
+        intencao,
+        imagemBase64:    b64,
+        texto:           document.getElementById('mc-texto').value.trim(),
+        link:            isWA ? '' : document.getElementById('mc-link').value.trim(),
+        cta:             isWA ? '' : document.getElementById('mc-cta').value,
+        orcamentoDiario: Number(document.getElementById('mc-orcamento').value),
+        paises:          ['BR'],
+        cidades,
+        raioKm:          raioRaw ? Number(raioRaw) : null,
+        idadeMin:        Number(document.getElementById('mc-idade-min').value) || 18,
+        idadeMax:        Number(document.getElementById('mc-idade-max').value) || 65,
+        generos,
+        plataformas,
+      };
+      const btn = document.getElementById('mc-btn-submit');
+      btn.disabled = true;
+      setMcStatus('info', 'Criando campanha... (4 etapas no Meta)');
+      fetch('/api/criar-campanha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.sucesso) {
+          setMcStatus('success',
+            `<strong>✓ ${data.mensagem}</strong><br><small>Campaign ID: <code>${data.campaign_id}</code></small>`);
+          document.getElementById('form-campanha-meta').reset();
+          onMcIntencao();
+        } else {
+          setMcStatus('error', `<strong>Erro:</strong> ${data.erro || 'resposta inesperada'}`);
+        }
+      })
+      .catch(err => setMcStatus('error', 'Falha na requisição: ' + err.message))
+      .finally(() => { btn.disabled = false; });
+    };
+    fr.onerror = () => setMcStatus('error', 'Erro ao ler a imagem selecionada.');
+    fr.readAsDataURL(imgFile);
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('mc-modal').style.display !== 'none')
+      fecharModalCampanha();
+  });
 </script>
+
+<!-- ═══ MODAL: CRIAR CAMPANHA ═════════════════════════ -->
+<div id="mc-modal" style="display:none" onclick="if(event.target===this)fecharModalCampanha()">
+  <div class="mc-box">
+    <div class="mc-top">
+      <h2>➕ Criar Campanha no Meta</h2>
+      <button class="mc-close" onclick="fecharModalCampanha()">✕</button>
+    </div>
+    <form id="form-campanha-meta" onsubmit="enviarCampanhaMeta(event)">
+      <div class="mc-body">
+        <div class="mc-field">
+          <label for="mc-nome">Nome da campanha</label>
+          <input type="text" id="mc-nome" placeholder="Ex: Promoção Verão 2025" required>
+        </div>
+        <div class="mc-field">
+          <label for="mc-intencao">Intenção</label>
+          <select id="mc-intencao" onchange="onMcIntencao()">
+            <option value="venda">💰 Venda (conversões)</option>
+            <option value="reconhecimento">👁 Reconhecimento de marca</option>
+            <option value="engajamento">❤️ Engajamento</option>
+            <option value="whatsapp">💬 WhatsApp</option>
+          </select>
+        </div>
+        <div class="mc-div"></div>
+        <div class="mc-field">
+          <label for="mc-img">Criativo (imagem)</label>
+          <input type="file" id="mc-img" accept="image/*" required>
+        </div>
+        <div class="mc-field">
+          <label for="mc-texto">Texto do anúncio</label>
+          <textarea id="mc-texto" placeholder="Texto que aparece no anúncio..." required></textarea>
+        </div>
+        <div class="mc-field" id="mc-grp-link">
+          <label for="mc-link">Link de destino</label>
+          <input type="text" id="mc-link" placeholder="https://seusite.com.br/pagina">
+        </div>
+        <div class="mc-field" id="mc-grp-cta">
+          <label for="mc-cta">Chamada para ação (CTA)</label>
+          <select id="mc-cta">
+            <option value="LEARN_MORE">Saiba mais</option>
+            <option value="SHOP_NOW">Comprar agora</option>
+            <option value="SIGN_UP">Cadastre-se</option>
+            <option value="GET_OFFER">Ver oferta</option>
+          </select>
+        </div>
+        <div class="mc-div"></div>
+        <div class="mc-field">
+          <label for="mc-orcamento">Orçamento diário (R$)</label>
+          <input type="number" id="mc-orcamento" min="6" step="0.01" placeholder="Ex: 30.00" required>
+        </div>
+        <div class="mc-div"></div>
+        <p class="mc-sec">Público-alvo</p>
+        <div class="mc-field">
+          <label for="mc-cidades">Cidades (opcional, separadas por vírgula)</label>
+          <input type="text" id="mc-cidades" placeholder="Ex: São Paulo, Rio de Janeiro">
+        </div>
+        <div class="mc-row2">
+          <div class="mc-field">
+            <label for="mc-raio">Raio em km (opcional)</label>
+            <input type="number" id="mc-raio" min="1" placeholder="Ex: 20">
+          </div>
+          <div class="mc-field">
+            <label for="mc-genero">Gênero</label>
+            <select id="mc-genero">
+              <option value="">Todos</option>
+              <option value="1">Homens</option>
+              <option value="2">Mulheres</option>
+            </select>
+          </div>
+        </div>
+        <div class="mc-row2">
+          <div class="mc-field">
+            <label for="mc-idade-min">Idade mínima</label>
+            <input type="number" id="mc-idade-min" min="13" max="65" value="18">
+          </div>
+          <div class="mc-field">
+            <label for="mc-idade-max">Idade máxima</label>
+            <input type="number" id="mc-idade-max" min="13" max="65" value="65">
+          </div>
+        </div>
+        <div class="mc-field">
+          <label>Posicionamento</label>
+          <div class="mc-chkgroup">
+            <label class="mc-chk">
+              <input type="checkbox" id="mc-plat-fb" value="facebook" checked>
+              Facebook
+            </label>
+            <label class="mc-chk">
+              <input type="checkbox" id="mc-plat-ig" value="instagram" checked>
+              Instagram
+            </label>
+          </div>
+        </div>
+      </div>
+      <div id="mc-status"></div>
+      <div class="mc-foot">
+        <button type="button" class="mc-btn-cancel" onclick="fecharModalCampanha()">Cancelar</button>
+        <button type="submit" class="mc-btn-criar" id="mc-btn-submit">Criar Campanha</button>
+      </div>
+    </form>
+  </div>
+</div>
 </body>
 </html>

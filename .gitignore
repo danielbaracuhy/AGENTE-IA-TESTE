@@ -1,0 +1,12 @@
+# Segredos — NUNCA commitar
+.env
+.env.local
+.env.*.local
+.claude/mcp.json
+
+node_modules/
+.vercel/
+.tmp/
+.DS_Store
+Thumbs.db
+*.rar
