@@ -1,26 +1,20 @@
-// =============================================================================
-//  /api/criar-campanha.js  —  Motor de criação de campanha (Vercel, Node 18+)
-//  Cria a campanha COMPLETA no Meta em 4 etapas. Token fica em env var (seguro).
-//  Toda campanha nasce PAUSED: você revisa no Gerenciador antes de ativar.
-//  ENV (Vercel > Settings > Environment Variables):
-//    META_ACCESS_TOKEN / META_AD_ACCOUNT_ID (act_...) / META_PAGE_ID / META_PIXEL_ID(opcional)
-// =============================================================================
 const API_VERSION = "v25.0";
 const GRAPH = `https://graph.facebook.com/${API_VERSION}`;
 
-const OBJETIVOS = {
-  venda:          { objective: "OUTCOME_SALES",      optimization_goal: "OFFSITE_CONVERSIONS", billing_event: "IMPRESSIONS", precisaPixel: true },
-  reconhecimento: { objective: "OUTCOME_AWARENESS",  optimization_goal: "REACH",                billing_event: "IMPRESSIONS", precisaPixel: false },
-  engajamento:    { objective: "OUTCOME_ENGAGEMENT", optimization_goal: "POST_ENGAGEMENT",      billing_event: "IMPRESSIONS", precisaPixel: false },
-  whatsapp:       { objective: "OUTCOME_ENGAGEMENT", optimization_goal: "CONVERSATIONS",        billing_event: "IMPRESSIONS", precisaPixel: false, destinoWhatsApp: true },
+// destino escolhido pelo empresário -> configuração de objetivo no Meta
+const DESTINOS = {
+  whatsapp: { objective: "OUTCOME_ENGAGEMENT", optimization_goal: "CONVERSATIONS", billing_event: "IMPRESSIONS", destinoWhatsApp: true },
+  site:     { objective: "OUTCOME_TRAFFIC",    optimization_goal: "LINK_CLICKS",   billing_event: "IMPRESSIONS", destinoWhatsApp: false },
 };
 
-async function buscarGeo(termo) {
-  const url = `${GRAPH}/search?type=adgeolocation&location_types=["city","region"]`
+function clampRaio(km) { let r = Number(km) || 70; if (r < 1) r = 1; if (r > 70) r = 70; return r; }
+
+async function buscarGeo(termo, tipo) { // tipo: "city" | "region"
+  const url = `${GRAPH}/search?type=adgeolocation&location_types=["${tipo}"]`
     + `&q=${encodeURIComponent(termo)}&access_token=${process.env.META_ACCESS_TOKEN}`;
   const res = await fetch(url);
   const data = await res.json();
-  if (!data.data || !data.data.length) throw new Error(`Localidade "${termo}" não encontrada no Meta.`);
+  if (!data.data || !data.data.length) throw new Error(`Localidade "${termo}" não encontrada (${tipo}).`);
   return data.data[0];
 }
 
@@ -39,62 +33,80 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ erro: "Use POST" });
   try {
     const {
-      nome, intencao, imagemBase64, texto, link, cta, orcamentoDiario,
-      paises, cidades, raioKm, idadeMin, idadeMax, generos, plataformas,
+      nome, destino, link, imagemBase64, texto, orcamentoDiario,
+      alcance, estados, cidades, idadeMin, idadeMax, generos, plataformas,
     } = req.body;
 
-    const cfg = OBJETIVOS[intencao];
-    if (!cfg) throw new Error("Intenção inválida. Use: venda, reconhecimento, engajamento ou whatsapp.");
-    if (cfg.precisaPixel && !process.env.META_PIXEL_ID)
-      throw new Error("Objetivo VENDA exige um Pixel configurado (META_PIXEL_ID).");
+    const cfg = DESTINOS[destino];
+    if (!cfg) throw new Error("Destino inválido. Use: whatsapp ou site.");
+    if (destino === "site" && !link) throw new Error("Para destino Site, informe o link.");
 
     const ACT = process.env.META_AD_ACCOUNT_ID;
     const reaisEmCentavos = Math.round(Number(orcamentoDiario) * 100);
 
+    // 1) imagem -> hash
     const img = await metaPost(`${ACT}/adimages`, { bytes: imagemBase64 }, "upload da imagem");
     const imageHash = Object.values(img.images)[0].hash;
 
+    // 2) campanha — ORÇAMENTO NA CAMPANHA (CBO)
     const campanha = await metaPost(`${ACT}/campaigns`, {
-      name: nome, objective: cfg.objective, status: "PAUSED",
-      special_ad_categories: "[]", buying_type: "AUCTION", bid_strategy: "LOWEST_COST_WITHOUT_CAP",
+      name: nome,
+      objective: cfg.objective,
+      status: "PAUSED",
+      special_ad_categories: "[]",
+      buying_type: "AUCTION",
+      daily_budget: reaisEmCentavos,
+      bid_strategy: "LOWEST_COST_WITHOUT_CAP",
       is_adset_budget_sharing_enabled: "false",
     }, "criar campanha");
 
-    const geo = { countries: paises || ["BR"] };
-    if (cidades && cidades.length) {
-      const chaves = [];
-      for (const c of cidades) {
-        const g = await buscarGeo(c);
-        chaves.push({ key: g.key, ...(raioKm ? { radius: raioKm, distance_unit: "kilometer" } : {}) });
-      }
-      geo.cities = chaves;
-      if (chaves.length) delete geo.countries;
+    // 3) localização (3 níveis)
+    const geo = {};
+    if (alcance === "estados") {
+      const regs = [];
+      for (const e of (estados || [])) { const g = await buscarGeo(e, "region"); regs.push({ key: g.key }); }
+      if (!regs.length) throw new Error("Informe ao menos um estado.");
+      geo.regions = regs;
+    } else if (alcance === "cidades") {
+      const cs = [];
+      for (const c of (cidades || [])) { const g = await buscarGeo(c.nome, "city"); cs.push({ key: g.key, radius: clampRaio(c.raio), distance_unit: "kilometer" }); }
+      if (!cs.length) throw new Error("Informe ao menos uma cidade.");
+      geo.cities = cs;
+    } else {
+      geo.countries = ["BR"]; // brasil (padrão)
     }
+
     const targeting = {
-      geo_locations: geo, age_min: idadeMin || 18, age_max: idadeMax || 65,
+      geo_locations: geo,
+      age_min: idadeMin || 18,
+      age_max: idadeMax || 65,
       ...(generos && generos.length ? { genders: generos } : {}),
       publisher_platforms: plataformas || ["facebook", "instagram"],
     };
+
+    // ad set — SEM orçamento (herda da campanha via CBO)
     const adsetParams = {
-      name: `${nome} - Conjunto`, campaign_id: campanha.id, daily_budget: reaisEmCentavos,
-      billing_event: cfg.billing_event, optimization_goal: cfg.optimization_goal,
-      targeting: JSON.stringify(targeting), status: "PAUSED",
+      name: `${nome} - Conjunto`,
+      campaign_id: campanha.id,
+      billing_event: cfg.billing_event,
+      optimization_goal: cfg.optimization_goal,
+      targeting: JSON.stringify(targeting),
+      status: "PAUSED",
       start_time: new Date(Date.now() + 86400000).toISOString(),
       end_time: new Date(Date.now() + 15 * 86400000).toISOString(),
     };
-    if (cfg.precisaPixel)
-      adsetParams.promoted_object = JSON.stringify({ pixel_id: process.env.META_PIXEL_ID, custom_event_type: "PURCHASE" });
     if (cfg.destinoWhatsApp) {
       adsetParams.destination_type = "WHATSAPP";
       adsetParams.promoted_object = JSON.stringify({ page_id: process.env.META_PAGE_ID });
     }
     const adset = await metaPost(`${ACT}/adsets`, adsetParams, "criar conjunto de anúncios");
 
+    // 4) criativo + anúncio
     const linkData = {
       image_hash: imageHash, message: texto,
       ...(cfg.destinoWhatsApp
         ? { call_to_action: { type: "WHATSAPP_MESSAGE" } }
-        : { link, call_to_action: { type: cta || "LEARN_MORE", value: { link } } }),
+        : { link, call_to_action: { type: "LEARN_MORE", value: { link } } }),
     };
     const creative = await metaPost(`${ACT}/adcreatives`, {
       name: `${nome} - Criativo`,

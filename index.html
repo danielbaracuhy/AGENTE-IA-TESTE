@@ -1102,111 +1102,94 @@ function enviarCampanhaMeta(e) {
   fr.readAsDataURL(imgFile);
 }
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && document.getElementById('modal-campanha').style.display !== 'none')
+  if (e.key === 'Escape' && document.getElementById('modalCampanha').style.display !== 'none')
     fecharModalCampanha();
 });
 </script>
 
-<!-- ═══ MODAL: CRIAR CAMPANHA ═════════════════════════ -->
-<div id="modal-campanha" style="display:none" onclick="if(event.target===this)fecharModalCampanha()">
-  <div class="mc-box">
-    <div class="mc-top">
-      <h2>➕ Criar Campanha no Meta</h2>
-      <button class="mc-close" onclick="fecharModalCampanha()">✕</button>
+<div id="modalCampanha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:flex-start;justify-content:center;overflow:auto;padding:40px 16px">
+  <div style="background:var(--surface,#1a1a2e);color:var(--text,#fff);max-width:560px;width:100%;border-radius:14px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="margin:0">➕ Criar Campanha no Meta</h2>
+      <button onclick="fecharModalCampanha()" style="background:none;border:none;color:var(--text,#fff);font-size:24px;cursor:pointer">×</button>
     </div>
-    <form id="form-campanha-meta" onsubmit="enviarCampanhaMeta(event)">
-      <div class="mc-body">
-        <div class="mc-field">
-          <label for="mc-nome">Nome da campanha</label>
-          <input type="text" id="mc-nome" placeholder="Ex: Promoção Verão 2025" required>
-        </div>
-        <div class="mc-field">
-          <label for="mc-intencao">Intenção</label>
-          <select id="mc-intencao" onchange="onMcIntencao()">
-            <option value="venda">💰 Venda (conversões)</option>
-            <option value="reconhecimento">👁 Reconhecimento de marca</option>
-            <option value="engajamento">❤️ Engajamento</option>
-            <option value="whatsapp">💬 WhatsApp</option>
-          </select>
-        </div>
-        <div class="mc-div"></div>
-        <div class="mc-field">
-          <label for="mc-img">Criativo (imagem)</label>
-          <input type="file" id="mc-img" accept="image/*" required>
-        </div>
-        <div class="mc-field">
-          <label for="mc-texto">Texto do anúncio</label>
-          <textarea id="mc-texto" placeholder="Texto que aparece no anúncio..." required></textarea>
-        </div>
-        <div class="mc-field" id="mc-grp-link">
-          <label for="mc-link">Link de destino</label>
-          <input type="text" id="mc-link" placeholder="https://seusite.com.br/pagina">
-        </div>
-        <div class="mc-field" id="mc-grp-cta">
-          <label for="mc-cta">Chamada para ação (CTA)</label>
-          <select id="mc-cta">
-            <option value="LEARN_MORE">Saiba mais</option>
-            <option value="SHOP_NOW">Comprar agora</option>
-            <option value="SIGN_UP">Cadastre-se</option>
-            <option value="GET_OFFER">Ver oferta</option>
-          </select>
-        </div>
-        <div class="mc-div"></div>
-        <div class="mc-field">
-          <label for="mc-orcamento">Orçamento diário (R$)</label>
-          <input type="number" id="mc-orcamento" min="6" step="0.01" placeholder="Ex: 30.00" required>
-        </div>
-        <div class="mc-div"></div>
-        <p class="mc-sec">Público-alvo</p>
-        <div class="mc-field">
-          <label for="mc-cidades">Cidades (opcional, separadas por vírgula)</label>
-          <input type="text" id="mc-cidades" placeholder="Ex: São Paulo, Rio de Janeiro">
-        </div>
-        <div class="mc-row2">
-          <div class="mc-field">
-            <label for="mc-raio">Raio em km (opcional)</label>
-            <input type="number" id="mc-raio" min="1" placeholder="Ex: 20">
-          </div>
-          <div class="mc-field">
-            <label for="mc-genero">Gênero</label>
-            <select id="mc-genero">
-              <option value="">Todos</option>
-              <option value="1">Homens</option>
-              <option value="2">Mulheres</option>
-            </select>
-          </div>
-        </div>
-        <div class="mc-row2">
-          <div class="mc-field">
-            <label for="mc-idade-min">Idade mínima</label>
-            <input type="number" id="mc-idade-min" min="13" max="65" value="18">
-          </div>
-          <div class="mc-field">
-            <label for="mc-idade-max">Idade máxima</label>
-            <input type="number" id="mc-idade-max" min="13" max="65" value="65">
-          </div>
-        </div>
-        <div class="mc-field">
-          <label>Posicionamento</label>
-          <div class="mc-chkgroup">
-            <label class="mc-chk">
-              <input type="checkbox" id="mc-plat-fb" value="facebook" checked>
-              Facebook
-            </label>
-            <label class="mc-chk">
-              <input type="checkbox" id="mc-plat-ig" value="instagram" checked>
-              Instagram
-            </label>
-          </div>
-        </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <label>Nome da campanha<input id="c-nome" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff;margin-top:4px" placeholder="Promo Junho"></label>
+      <label>Destino do anúncio
+        <select id="c-destino" onchange="atualizaDestino()" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff;margin-top:4px">
+          <option value="whatsapp">WhatsApp (conversa)</option>
+          <option value="site">Site (link)</option>
+        </select>
+      </label>
+      <label id="c-wrap-link" style="display:none">Link do site<input id="c-link" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff;margin-top:4px" placeholder="https://..."></label>
+      <label>Criativo (imagem)<input id="c-imagem" type="file" accept="image/*" style="width:100%;margin-top:4px"></label>
+      <label>Texto do anúncio<textarea id="c-texto" rows="3" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff;margin-top:4px"></textarea></label>
+      <label>Orçamento por dia (R$)<input id="c-orcamento" type="number" value="20" min="6" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff;margin-top:4px"></label>
+      <label>Alcance do anúncio
+        <select id="c-alcance" onchange="atualizaAlcance()" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff;margin-top:4px">
+          <option value="brasil">Brasil inteiro</option>
+          <option value="estados">Estado(s)</option>
+          <option value="cidades">Cidade(s) + raio</option>
+        </select>
+      </label>
+      <div id="c-wrap-estados" style="display:none">
+        <label>Estados (separados por vírgula)<input id="c-estados" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff;margin-top:4px" placeholder="São Paulo, Minas Gerais"></label>
       </div>
-      <div id="mc-status"></div>
-      <div class="mc-foot">
-        <button type="button" class="btn btn-ghost" onclick="fecharModalCampanha()">Cancelar</button>
-        <button type="submit" class="btn btn-primary" id="mc-btn-submit">Criar Campanha</button>
+      <div id="c-wrap-cidades" style="display:none">
+        <div style="margin-bottom:6px">Cidades (cada uma com seu raio, máx 70 km):</div>
+        <div id="c-cidades-lista"></div>
+        <button type="button" onclick="addCidade()" style="background:none;border:1px dashed #666;color:var(--text,#fff);padding:6px 10px;border-radius:6px;cursor:pointer">+ Adicionar cidade</button>
       </div>
-    </form>
+      <div style="display:flex;gap:8px">
+        <label style="flex:1">Idade mín<input id="c-idade-min" type="number" value="18" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff;margin-top:4px"></label>
+        <label style="flex:1">Idade máx<input id="c-idade-max" type="number" value="65" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff;margin-top:4px"></label>
+      </div>
+      <div>Posicionamento:
+        <label style="margin-left:8px"><input type="checkbox" class="c-plat" value="facebook" checked> Facebook</label>
+        <label style="margin-left:8px"><input type="checkbox" class="c-plat" value="instagram" checked> Instagram</label>
+      </div>
+      <button onclick="enviarCampanha()" style="margin-top:8px;padding:12px;border:none;border-radius:8px;background:var(--accent,#7c3aed);color:#fff;font-weight:600;cursor:pointer">Criar campanha (nasce pausada)</button>
+      <p id="c-resultado" style="margin-top:8px"></p>
+    </div>
   </div>
 </div>
+<script>
+function abrirModalCampanha(){document.getElementById('modalCampanha').style.display='flex';atualizaDestino();atualizaAlcance();if(!document.querySelectorAll('#c-cidades-lista .cidade-row').length)addCidade();}
+function fecharModalCampanha(){document.getElementById('modalCampanha').style.display='none';}
+function atualizaDestino(){var site=document.getElementById('c-destino').value==='site';document.getElementById('c-wrap-link').style.display=site?'block':'none';}
+function atualizaAlcance(){var v=document.getElementById('c-alcance').value;document.getElementById('c-wrap-estados').style.display=v==='estados'?'block':'none';document.getElementById('c-wrap-cidades').style.display=v==='cidades'?'block':'none';}
+function addCidade(){var div=document.createElement('div');div.className='cidade-row';div.style.cssText='display:flex;gap:6px;margin-bottom:6px';div.innerHTML='<input class="cidade-nome" placeholder="Cidade" style="flex:2;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff"><input class="cidade-raio" type="number" value="70" min="1" max="70" style="flex:1;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff"><button type="button" onclick="this.parentNode.remove()" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:18px">×</button>';document.getElementById('c-cidades-lista').appendChild(div);}
+async function enviarCampanha(){
+  var out=document.getElementById('c-resultado');
+  var arq=document.getElementById('c-imagem').files[0];
+  if(!arq){out.style.color='#f87171';out.textContent='Selecione uma imagem.';return;}
+  out.style.color='#fff';out.textContent='Criando campanha... (4 etapas no Meta)';
+  var imagemBase64=await new Promise(function(ok){var r=new FileReader();r.onload=function(){ok(r.result.split(',')[1]);};r.readAsDataURL(arq);});
+  var estados=document.getElementById('c-estados').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  var cidades=[].slice.call(document.querySelectorAll('#c-cidades-lista .cidade-row')).map(function(row){return {nome:row.querySelector('.cidade-nome').value.trim(),raio:Number(row.querySelector('.cidade-raio').value)||70};}).filter(function(c){return c.nome;});
+  var plataformas=[].slice.call(document.querySelectorAll('.c-plat:checked')).map(function(c){return c.value;});
+  var payload={
+    nome:document.getElementById('c-nome').value,
+    destino:document.getElementById('c-destino').value,
+    link:document.getElementById('c-link').value,
+    imagemBase64:imagemBase64,
+    texto:document.getElementById('c-texto').value,
+    orcamentoDiario:document.getElementById('c-orcamento').value,
+    alcance:document.getElementById('c-alcance').value,
+    estados:estados,
+    cidades:cidades,
+    idadeMin:Number(document.getElementById('c-idade-min').value),
+    idadeMax:Number(document.getElementById('c-idade-max').value),
+    generos:[],
+    plataformas:plataformas
+  };
+  try{
+    var res=await fetch('/api/criar-campanha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    var data=await res.json();
+    if(data.sucesso){out.style.color='#34d399';out.textContent='✅ '+data.mensagem+' (ID: '+data.campaign_id+')';}
+    else{out.style.color='#f87171';out.textContent='❌ '+data.erro;}
+  }catch(e){out.style.color='#f87171';out.textContent='❌ Falha de rede: '+e.message;}
+}
+</script>
 </body>
 </html>
