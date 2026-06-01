@@ -57,6 +57,7 @@ export default async function handler(req, res) {
     const campanha = await metaPost(`${ACT}/campaigns`, {
       name: nome, objective: cfg.objective, status: "PAUSED",
       special_ad_categories: "[]", buying_type: "AUCTION", bid_strategy: "LOWEST_COST_WITHOUT_CAP",
+      is_adset_budget_sharing_enabled: "false",
     }, "criar campanha");
 
     const geo = { countries: paises || ["BR"] };
