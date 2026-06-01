@@ -82,6 +82,7 @@ export default async function handler(req, res) {
       age_max: idadeMax || 65,
       ...(generos && generos.length ? { genders: generos } : {}),
       publisher_platforms: plataformas || ["facebook", "instagram"],
+      targeting_automation: { advantage_audience: 0 },
     };
 
     // ad set — SEM orçamento (herda da campanha via CBO)
