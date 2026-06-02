@@ -1,15 +1,18 @@
+import { del } from '@vercel/blob';
+
 const API_VERSION = "v25.0";
 const GRAPH = `https://graph.facebook.com/${API_VERSION}`;
 
-// destino escolhido pelo empresário -> configuração de objetivo no Meta
 const DESTINOS = {
   whatsapp: { objective: "OUTCOME_ENGAGEMENT", optimization_goal: "CONVERSATIONS", billing_event: "IMPRESSIONS", destinoWhatsApp: true },
   site:     { objective: "OUTCOME_TRAFFIC",    optimization_goal: "LINK_CLICKS",   billing_event: "IMPRESSIONS", destinoWhatsApp: false },
 };
 
+export const config = { maxDuration: 60 };
+
 function clampRaio(km) { let r = Number(km) || 70; if (r < 1) r = 1; if (r > 70) r = 70; return r; }
 
-async function buscarGeo(termo, tipo) { // tipo: "city" | "region"
+async function buscarGeo(termo, tipo) {
   const url = `${GRAPH}/search?type=adgeolocation&location_types=["${tipo}"]`
     + `&q=${encodeURIComponent(termo)}&access_token=${process.env.META_ACCESS_TOKEN}`;
   const res = await fetch(url);
@@ -29,11 +32,22 @@ async function metaPost(path, params, etapa) {
   return data;
 }
 
+async function metaGet(path, params, etapa) {
+  const qs = new URLSearchParams({ ...params, access_token: process.env.META_ACCESS_TOKEN });
+  const res = await fetch(`${GRAPH}/${path}?${qs}`);
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    const msg = data.error?.error_user_msg || data.error?.message || "erro desconhecido";
+    throw new Error(`[${etapa}] ${msg}`);
+  }
+  return data;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ erro: "Use POST" });
   try {
     const {
-      nome, destino, link, imagemBase64, texto, orcamentoDiario,
+      nome, destino, link, imagemBase64, videoUrl, texto, orcamentoDiario,
       alcance, estados, cidades, idadeMin, idadeMax, generos, plataformas,
     } = req.body;
 
@@ -45,10 +59,53 @@ export default async function handler(req, res) {
 
     const ACT = process.env.META_AD_ACCOUNT_ID;
     const reaisEmCentavos = Math.round(Number(orcamentoDiario) * 100);
+    const waLink = `https://wa.me/${process.env.META_WHATSAPP_NUMBER}`;
 
-    // 1) imagem -> hash
-    const img = await metaPost(`${ACT}/adimages`, { bytes: imagemBase64 }, "upload da imagem");
-    const imageHash = Object.values(img.images)[0].hash;
+    // 1) Criativo: monta object_story_spec conforme tipo de mídia
+    let creativeSpec;
+
+    if (videoUrl) {
+      // a) Envia vídeo via URL pública do Blob
+      const vidUpload = await metaPost(`${ACT}/advideos`, { file_url: videoUrl }, "upload do vídeo");
+      const video_id = vidUpload.id;
+
+      // b) Polling: aguarda status "ready" por até ~51s (17 × 3s)
+      let ready = false;
+      for (let i = 0; i < 17; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        const st = await metaGet(`${video_id}`, { fields: "status" }, "status do vídeo");
+        if (st?.status?.video_status === "ready") { ready = true; break; }
+      }
+      if (!ready) throw new Error("Vídeo ainda processando, tente de novo em alguns segundos.");
+
+      // c) Capa automática: preferred thumbnail ou primeiro disponível
+      const thumbs = await metaGet(`${video_id}/thumbnails`, {}, "thumbnails do vídeo");
+      const preferred = (thumbs.data || []).find(t => t.is_preferred) || thumbs.data?.[0];
+      if (!preferred) throw new Error("[thumbnails do vídeo] Nenhuma thumbnail disponível.");
+
+      // d) video_data com call_to_action por destino
+      const cta = cfg.destinoWhatsApp
+        ? { type: "WHATSAPP_MESSAGE", value: { link: waLink } }
+        : { type: "LEARN_MORE", value: { link } };
+
+      creativeSpec = {
+        page_id: process.env.META_PAGE_ID,
+        video_data: { video_id, message: texto, image_url: preferred.uri, call_to_action: cta },
+      };
+    } else {
+      // Imagem: fluxo original intacto
+      const img = await metaPost(`${ACT}/adimages`, { bytes: imagemBase64 }, "upload da imagem");
+      const imageHash = Object.values(img.images)[0].hash;
+      creativeSpec = {
+        page_id: process.env.META_PAGE_ID,
+        link_data: {
+          image_hash: imageHash, message: texto,
+          ...(cfg.destinoWhatsApp
+            ? { link: waLink, call_to_action: { type: "WHATSAPP_MESSAGE" } }
+            : { link, call_to_action: { type: "LEARN_MORE", value: { link } } }),
+        },
+      };
+    }
 
     // 2) campanha — ORÇAMENTO NA CAMPANHA (CBO)
     const campanha = await metaPost(`${ACT}/campaigns`, {
@@ -75,7 +132,7 @@ export default async function handler(req, res) {
       if (!cs.length) throw new Error("Informe ao menos uma cidade.");
       geo.cities = cs;
     } else {
-      geo.countries = ["BR"]; // brasil (padrão)
+      geo.countries = ["BR"];
     }
 
     const targeting = {
@@ -105,22 +162,20 @@ export default async function handler(req, res) {
     const adset = await metaPost(`${ACT}/adsets`, adsetParams, "criar conjunto de anúncios");
 
     // 4) criativo + anúncio
-    const waLink = `https://wa.me/${process.env.META_WHATSAPP_NUMBER}`;
-    const linkData = {
-      image_hash: imageHash, message: texto,
-      ...(cfg.destinoWhatsApp
-        ? { link: waLink, call_to_action: { type: "WHATSAPP_MESSAGE" } }
-        : { link, call_to_action: { type: "LEARN_MORE", value: { link } } }),
-    };
     const creative = await metaPost(`${ACT}/adcreatives`, {
       name: `${nome} - Criativo`,
-      object_story_spec: JSON.stringify({ page_id: process.env.META_PAGE_ID, link_data: linkData }),
+      object_story_spec: JSON.stringify(creativeSpec),
     }, "criar criativo");
 
     const anuncio = await metaPost(`${ACT}/ads`, {
       name: `${nome} - Anúncio`, adset_id: adset.id,
       creative: JSON.stringify({ creative_id: creative.id }), status: "PAUSED",
     }, "criar anúncio");
+
+    // f) Apaga vídeo do Blob após criação bem-sucedida (erro silencioso: não desfaz campanha)
+    if (videoUrl) {
+      try { await del(videoUrl); } catch (_) {}
+    }
 
     return res.status(200).json({
       sucesso: true,

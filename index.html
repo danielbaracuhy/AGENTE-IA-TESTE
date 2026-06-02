@@ -1164,7 +1164,7 @@ async function enviarCampanha(){
   var arq=document.getElementById('c-imagem').files[0];
   if(!arq){out.style.color='#f87171';out.textContent='Selecione uma imagem ou vídeo.';return;}
 
-  // ── VÍDEO: sobe pro Blob, exibe URL, NÃO cria campanha ainda ──
+  // ── VÍDEO: sobe pro Blob, depois cria campanha no Meta ──
   if(arq.type.startsWith('video/')){
     if(arq.size>50*1024*1024){out.style.color='#f87171';out.textContent='❌ Vídeo muito grande. Limite: 50 MB.';return;}
     out.style.color='#fff';out.textContent='Validando duração do vídeo...';
@@ -1181,8 +1181,30 @@ async function enviarCampanha(){
       out.textContent='Enviando vídeo para armazenamento...';
       var mod=await import('https://esm.sh/@vercel/blob/client');
       var blob=await mod.upload(arq.name,arq,{access:'public',handleUploadUrl:'/api/blob-upload'});
-      out.style.color='#34d399';out.textContent='Vídeo enviado: '+blob.url;
-    }catch(e){out.style.color='#f87171';out.textContent='❌ Erro no upload do vídeo: '+e.message;}
+      out.textContent='Vídeo armazenado. Criando campanha no Meta...';
+      var estados=document.getElementById('c-estados').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
+      var cidades=[].slice.call(document.querySelectorAll('#c-cidades-lista .cidade-row')).map(function(row){return {nome:row.querySelector('.cidade-nome').value.trim(),raio:Number(row.querySelector('.cidade-raio').value)||70};}).filter(function(c){return c.nome;});
+      var plataformas=[].slice.call(document.querySelectorAll('.c-plat:checked')).map(function(c){return c.value;});
+      var payload={
+        nome:document.getElementById('c-nome').value,
+        destino:document.getElementById('c-destino').value,
+        link:document.getElementById('c-link').value,
+        videoUrl:blob.url,
+        texto:document.getElementById('c-texto').value,
+        orcamentoDiario:document.getElementById('c-orcamento').value,
+        alcance:document.getElementById('c-alcance').value,
+        estados:estados,
+        cidades:cidades,
+        idadeMin:Number(document.getElementById('c-idade-min').value),
+        idadeMax:Number(document.getElementById('c-idade-max').value),
+        generos:[],
+        plataformas:plataformas
+      };
+      var res=await fetch('/api/criar-campanha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      var data=await res.json();
+      if(data.sucesso){out.style.color='#34d399';out.textContent='✅ '+data.mensagem+' (ID: '+data.campaign_id+')';}
+      else{out.style.color='#f87171';out.textContent='❌ '+data.erro;}
+    }catch(e){out.style.color='#f87171';out.textContent='❌ Erro: '+e.message;}
     return;
   }
 
