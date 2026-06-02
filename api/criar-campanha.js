@@ -40,6 +40,8 @@ export default async function handler(req, res) {
     const cfg = DESTINOS[destino];
     if (!cfg) throw new Error("Destino inválido. Use: whatsapp ou site.");
     if (destino === "site" && !link) throw new Error("Para destino Site, informe o link.");
+    if (destino === "whatsapp" && !process.env.META_WHATSAPP_NUMBER)
+      throw new Error("META_WHATSAPP_NUMBER não configurado no servidor.");
 
     const ACT = process.env.META_AD_ACCOUNT_ID;
     const reaisEmCentavos = Math.round(Number(orcamentoDiario) * 100);
@@ -103,10 +105,11 @@ export default async function handler(req, res) {
     const adset = await metaPost(`${ACT}/adsets`, adsetParams, "criar conjunto de anúncios");
 
     // 4) criativo + anúncio
+    const waLink = `https://wa.me/${process.env.META_WHATSAPP_NUMBER}`;
     const linkData = {
       image_hash: imageHash, message: texto,
       ...(cfg.destinoWhatsApp
-        ? { call_to_action: { type: "WHATSAPP_MESSAGE" } }
+        ? { link: waLink, call_to_action: { type: "WHATSAPP_MESSAGE" } }
         : { link, call_to_action: { type: "LEARN_MORE", value: { link } } }),
     };
     const creative = await metaPost(`${ACT}/adcreatives`, {
