@@ -85,7 +85,7 @@ export default async function handler(req, res) {
 
       // d) video_data com call_to_action por destino
       const cta = cfg.destinoWhatsApp
-        ? { type: "WHATSAPP_MESSAGE", value: { link: waLink } }
+        ? { type: "WHATSAPP_MESSAGE" }
         : { type: "LEARN_MORE", value: { link } };
 
       creativeSpec = {
