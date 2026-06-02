@@ -1122,7 +1122,7 @@ document.addEventListener('keydown', e => {
         </select>
       </label>
       <label id="c-wrap-link" style="display:none">Link do site<input id="c-link" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff;margin-top:4px" placeholder="https://..."></label>
-      <label>Criativo (imagem)<input id="c-imagem" type="file" accept="image/*" style="width:100%;margin-top:4px"></label>
+      <label>Criativo (imagem ou vídeo)<input id="c-imagem" type="file" accept="image/*,video/mp4,video/quicktime,video/webm" style="width:100%;margin-top:4px"></label>
       <label>Texto do anúncio<textarea id="c-texto" rows="3" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff;margin-top:4px"></textarea></label>
       <label>Orçamento por dia (R$)<input id="c-orcamento" type="number" value="20" min="6" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff;margin-top:4px"></label>
       <label>Alcance do anúncio
@@ -1162,7 +1162,31 @@ function addCidade(){var div=document.createElement('div');div.className='cidade
 async function enviarCampanha(){
   var out=document.getElementById('c-resultado');
   var arq=document.getElementById('c-imagem').files[0];
-  if(!arq){out.style.color='#f87171';out.textContent='Selecione uma imagem.';return;}
+  if(!arq){out.style.color='#f87171';out.textContent='Selecione uma imagem ou vídeo.';return;}
+
+  // ── VÍDEO: sobe pro Blob, exibe URL, NÃO cria campanha ainda ──
+  if(arq.type.startsWith('video/')){
+    if(arq.size>50*1024*1024){out.style.color='#f87171';out.textContent='❌ Vídeo muito grande. Limite: 50 MB.';return;}
+    out.style.color='#fff';out.textContent='Validando duração do vídeo...';
+    try{
+      var duration=await new Promise(function(ok,rej){
+        var url=URL.createObjectURL(arq);
+        var v=document.createElement('video');
+        v.preload='metadata';
+        v.onloadedmetadata=function(){URL.revokeObjectURL(url);ok(v.duration);};
+        v.onerror=function(){URL.revokeObjectURL(url);rej(new Error('Não foi possível ler o vídeo.'));};
+        v.src=url;
+      });
+      if(duration>60){out.style.color='#f87171';out.textContent='❌ Vídeo muito longo ('+Math.ceil(duration)+'s). Limite: 60 segundos.';return;}
+      out.textContent='Enviando vídeo para armazenamento...';
+      var mod=await import('https://esm.sh/@vercel/blob/client');
+      var blob=await mod.upload(arq.name,arq,{access:'public',handleUploadUrl:'/api/blob-upload'});
+      out.style.color='#34d399';out.textContent='Vídeo enviado: '+blob.url;
+    }catch(e){out.style.color='#f87171';out.textContent='❌ Erro no upload do vídeo: '+e.message;}
+    return;
+  }
+
+  // ── IMAGEM: fluxo original sem alteração ──────────────────────
   out.style.color='#fff';out.textContent='Criando campanha... (4 etapas no Meta)';
   var imagemBase64=await new Promise(function(ok){var r=new FileReader();r.onload=function(){ok(r.result.split(',')[1]);};r.readAsDataURL(arq);});
   var estados=document.getElementById('c-estados').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
