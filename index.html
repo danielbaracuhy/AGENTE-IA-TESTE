@@ -1168,6 +1168,17 @@ async function enviarCampanha(){
   if(arq.type.startsWith('video/')){
     if(arq.size>200*1024*1024){out.style.color='#f87171';out.textContent='❌ Vídeo muito grande. Limite: 200 MB.';return;}
     out.style.color='#fff';out.textContent='Validando duração do vídeo...';
+
+    // barra de progresso — criada aqui, só para o fluxo de vídeo
+    var progWrap=document.createElement('div');
+    progWrap.style.cssText='width:100%;background:#374151;border-radius:6px;margin-top:6px;height:8px;overflow:hidden';
+    var progInner=document.createElement('div');
+    progInner.style.cssText='height:100%;width:0%;background:#7c3aed;border-radius:6px;transition:width 0.2s';
+    progWrap.appendChild(progInner);
+    var progStyle=document.createElement('style');
+    progStyle.textContent='@keyframes c-pulse{0%,100%{opacity:1}50%{opacity:.4}}';
+    var limparProg=function(){progWrap.remove();progStyle.remove();};
+
     try{
       var duration=await new Promise(function(ok,rej){
         var url=URL.createObjectURL(arq);
@@ -1179,36 +1190,49 @@ async function enviarCampanha(){
       });
       if(duration>300){out.style.color='#f87171';out.textContent='❌ Vídeo muito longo ('+Math.ceil(duration)+'s). Limite: 300 segundos.';return;}
 
-      // 1. Sobe pro Blob
-      out.textContent='Enviando vídeo para armazenamento...';
+      // 1. Sobe pro Blob com barra de progresso
+      out.textContent='Enviando vídeo 0%...';
+      out.insertAdjacentElement('afterend',progWrap);
+      document.head.appendChild(progStyle);
       var mod=await import('https://esm.sh/@vercel/blob/client');
-      var blob=await mod.upload(arq.name,arq,{access:'public',handleUploadUrl:'/api/blob-upload'});
+      var blob=await mod.upload(arq.name,arq,{
+        access:'public',
+        handleUploadUrl:'/api/blob-upload',
+        onUploadProgress:function(p){
+          out.textContent='Enviando vídeo '+p.percentage+'%...';
+          progInner.style.width=p.percentage+'%';
+        }
+      });
       var videoUrl=blob.url;
 
-      // 2. Registra o vídeo no Meta (retorna videoId na hora, sem esperar processamento)
+      // 2. Registra o vídeo no Meta — barra vira indeterminada (pulso)
+      progInner.style.transition='none';
+      progInner.style.width='100%';
+      progInner.style.animation='c-pulse 1.2s ease-in-out infinite';
       out.textContent='Enviando vídeo ao Meta...';
       var startRes=await fetch('/api/video-start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({videoUrl:videoUrl})});
       var startData=await startRes.json();
-      if(!startRes.ok||startData.erro){out.style.color='#f87171';out.textContent='❌ '+startData.erro;return;}
+      if(!startRes.ok||startData.erro){out.style.color='#f87171';out.textContent='❌ '+startData.erro;limparProg();return;}
       var videoId=startData.videoId;
 
       // 3. Polling de status no cliente (~3s por ciclo, limite 5 min = 100 tentativas)
-      out.textContent='Processando vídeo...';
+      out.textContent='Processando vídeo no Meta...';
       var pronto=false;
       for(var i=0;i<100;i++){
         await new Promise(function(r){setTimeout(r,3000);});
         var stRes=await fetch('/api/video-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({videoId:videoId,videoUrl:videoUrl})});
         var stData=await stRes.json();
         if(stData.status==='ready'){pronto=true;break;}
-        if(stData.status==='error'||stData.erro){out.style.color='#f87171';out.textContent='❌ Erro no processamento do vídeo pelo Meta.';return;}
+        if(stData.status==='error'||stData.erro){out.style.color='#f87171';out.textContent='❌ Erro no processamento do vídeo pelo Meta.';limparProg();return;}
       }
       if(!pronto){
         fetch('/api/blob-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({videoUrl:videoUrl})});
-        out.style.color='#f87171';out.textContent='❌ Timeout: vídeo não ficou pronto em 5 minutos. Tente de novo.';return;
+        out.style.color='#f87171';out.textContent='❌ Timeout: vídeo não ficou pronto em 5 minutos. Tente de novo.';limparProg();return;
       }
 
       // 4. Cria campanha com videoId já pronto
-      out.textContent='Criando campanha no Meta...';
+      limparProg();
+      out.textContent='Publicando no Meta...';
       var estados=document.getElementById('c-estados').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
       var cidades=[].slice.call(document.querySelectorAll('#c-cidades-lista .cidade-row')).map(function(row){return {nome:row.querySelector('.cidade-nome').value.trim(),raio:Number(row.querySelector('.cidade-raio').value)||70};}).filter(function(c){return c.nome;});
       var plataformas=[].slice.call(document.querySelectorAll('.c-plat:checked')).map(function(c){return c.value;});
@@ -1232,7 +1256,7 @@ async function enviarCampanha(){
       var campData=await campRes.json();
       if(campData.sucesso){out.style.color='#34d399';out.textContent='✅ '+campData.mensagem+' (ID: '+campData.campaign_id+')';}
       else{out.style.color='#f87171';out.textContent='❌ '+campData.erro;}
-    }catch(e){out.style.color='#f87171';out.textContent='❌ Erro: '+e.message;}
+    }catch(e){out.style.color='#f87171';out.textContent='❌ Erro: '+e.message;limparProg();}
     return;
   }
 
