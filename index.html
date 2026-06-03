@@ -1164,7 +1164,7 @@ async function enviarCampanha(){
   var arq=document.getElementById('c-imagem').files[0];
   if(!arq){out.style.color='#f87171';out.textContent='Selecione uma imagem ou vídeo.';return;}
 
-  // ── VÍDEO: sobe pro Blob, depois cria campanha no Meta ──
+  // ── VÍDEO: Blob -> video-start -> polling video-status -> criar-campanha ──
   if(arq.type.startsWith('video/')){
     if(arq.size>50*1024*1024){out.style.color='#f87171';out.textContent='❌ Vídeo muito grande. Limite: 50 MB.';return;}
     out.style.color='#fff';out.textContent='Validando duração do vídeo...';
@@ -1178,10 +1178,37 @@ async function enviarCampanha(){
         v.src=url;
       });
       if(duration>60){out.style.color='#f87171';out.textContent='❌ Vídeo muito longo ('+Math.ceil(duration)+'s). Limite: 60 segundos.';return;}
+
+      // 1. Sobe pro Blob
       out.textContent='Enviando vídeo para armazenamento...';
       var mod=await import('https://esm.sh/@vercel/blob/client');
       var blob=await mod.upload(arq.name,arq,{access:'public',handleUploadUrl:'/api/blob-upload'});
-      out.textContent='Vídeo armazenado. Criando campanha no Meta...';
+      var videoUrl=blob.url;
+
+      // 2. Registra o vídeo no Meta (retorna videoId na hora, sem esperar processamento)
+      out.textContent='Enviando vídeo ao Meta...';
+      var startRes=await fetch('/api/video-start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({videoUrl:videoUrl})});
+      var startData=await startRes.json();
+      if(!startRes.ok||startData.erro){out.style.color='#f87171';out.textContent='❌ '+startData.erro;return;}
+      var videoId=startData.videoId;
+
+      // 3. Polling de status no cliente (~3s por ciclo, limite 5 min = 100 tentativas)
+      out.textContent='Processando vídeo...';
+      var pronto=false;
+      for(var i=0;i<100;i++){
+        await new Promise(function(r){setTimeout(r,3000);});
+        var stRes=await fetch('/api/video-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({videoId:videoId,videoUrl:videoUrl})});
+        var stData=await stRes.json();
+        if(stData.status==='ready'){pronto=true;break;}
+        if(stData.status==='error'||stData.erro){out.style.color='#f87171';out.textContent='❌ Erro no processamento do vídeo pelo Meta.';return;}
+      }
+      if(!pronto){
+        fetch('/api/blob-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({videoUrl:videoUrl})});
+        out.style.color='#f87171';out.textContent='❌ Timeout: vídeo não ficou pronto em 5 minutos. Tente de novo.';return;
+      }
+
+      // 4. Cria campanha com videoId já pronto
+      out.textContent='Criando campanha no Meta...';
       var estados=document.getElementById('c-estados').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
       var cidades=[].slice.call(document.querySelectorAll('#c-cidades-lista .cidade-row')).map(function(row){return {nome:row.querySelector('.cidade-nome').value.trim(),raio:Number(row.querySelector('.cidade-raio').value)||70};}).filter(function(c){return c.nome;});
       var plataformas=[].slice.call(document.querySelectorAll('.c-plat:checked')).map(function(c){return c.value;});
@@ -1189,7 +1216,8 @@ async function enviarCampanha(){
         nome:document.getElementById('c-nome').value,
         destino:document.getElementById('c-destino').value,
         link:document.getElementById('c-link').value,
-        videoUrl:blob.url,
+        videoId:videoId,
+        videoUrl:videoUrl,
         texto:document.getElementById('c-texto').value,
         orcamentoDiario:document.getElementById('c-orcamento').value,
         alcance:document.getElementById('c-alcance').value,
@@ -1200,10 +1228,10 @@ async function enviarCampanha(){
         generos:[],
         plataformas:plataformas
       };
-      var res=await fetch('/api/criar-campanha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      var data=await res.json();
-      if(data.sucesso){out.style.color='#34d399';out.textContent='✅ '+data.mensagem+' (ID: '+data.campaign_id+')';}
-      else{out.style.color='#f87171';out.textContent='❌ '+data.erro;}
+      var campRes=await fetch('/api/criar-campanha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      var campData=await campRes.json();
+      if(campData.sucesso){out.style.color='#34d399';out.textContent='✅ '+campData.mensagem+' (ID: '+campData.campaign_id+')';}
+      else{out.style.color='#f87171';out.textContent='❌ '+campData.erro;}
     }catch(e){out.style.color='#f87171';out.textContent='❌ Erro: '+e.message;}
     return;
   }

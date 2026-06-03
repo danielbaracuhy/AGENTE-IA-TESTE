@@ -45,12 +45,11 @@ async function metaGet(path, params, etapa) {
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ erro: "Use POST" });
+  const {
+    nome, destino, link, imagemBase64, videoId, videoUrl, texto, orcamentoDiario,
+    alcance, estados, cidades, idadeMin, idadeMax, generos, plataformas,
+  } = req.body || {};
   try {
-    const {
-      nome, destino, link, imagemBase64, videoUrl, texto, orcamentoDiario,
-      alcance, estados, cidades, idadeMin, idadeMax, generos, plataformas,
-    } = req.body;
-
     const cfg = DESTINOS[destino];
     if (!cfg) throw new Error("Destino inválido. Use: whatsapp ou site.");
     if (destino === "site" && !link) throw new Error("Para destino Site, informe o link.");
@@ -64,33 +63,21 @@ export default async function handler(req, res) {
     // 1) Criativo: monta object_story_spec conforme tipo de mídia
     let creativeSpec;
 
-    if (videoUrl) {
-      // a) Envia vídeo via URL pública do Blob
-      const vidUpload = await metaPost(`${ACT}/advideos`, { file_url: videoUrl }, "upload do vídeo");
-      const video_id = vidUpload.id;
-
-      // b) Polling: aguarda status "ready" por até ~51s (17 × 3s)
-      let ready = false;
-      for (let i = 0; i < 17; i++) {
-        await new Promise(r => setTimeout(r, 3000));
-        const st = await metaGet(`${video_id}`, { fields: "status" }, "status do vídeo");
-        if (st?.status?.video_status === "ready") { ready = true; break; }
-      }
-      if (!ready) throw new Error("Vídeo ainda processando, tente de novo em alguns segundos.");
-
-      // c) Capa automática: preferred thumbnail ou primeiro disponível
-      const thumbs = await metaGet(`${video_id}/thumbnails`, {}, "thumbnails do vídeo");
+    if (videoId) {
+      // vídeo já está "ready" — polling foi feito no cliente via /api/video-status
+      // a) Capa automática: preferred thumbnail ou primeiro disponível
+      const thumbs = await metaGet(`${videoId}/thumbnails`, {}, "thumbnails do vídeo");
       const preferred = (thumbs.data || []).find(t => t.is_preferred) || thumbs.data?.[0];
       if (!preferred) throw new Error("[thumbnails do vídeo] Nenhuma thumbnail disponível.");
 
-      // d) video_data com call_to_action por destino
+      // b) video_data com call_to_action por destino
       const cta = cfg.destinoWhatsApp
         ? { type: "WHATSAPP_MESSAGE" }
         : { type: "LEARN_MORE", value: { link } };
 
       creativeSpec = {
         page_id: process.env.META_PAGE_ID,
-        video_data: { video_id, message: texto, image_url: preferred.uri, call_to_action: cta },
+        video_data: { video_id: videoId, message: texto, image_url: preferred.uri, call_to_action: cta },
       };
     } else {
       // Imagem: fluxo original intacto
@@ -172,11 +159,6 @@ export default async function handler(req, res) {
       creative: JSON.stringify({ creative_id: creative.id }), status: "PAUSED",
     }, "criar anúncio");
 
-    // f) Apaga vídeo do Blob após criação bem-sucedida (erro silencioso: não desfaz campanha)
-    if (videoUrl) {
-      try { await del(videoUrl); } catch (_) {}
-    }
-
     return res.status(200).json({
       sucesso: true,
       mensagem: "Campanha criada e PAUSADA. Revise no Gerenciador de Anúncios antes de ativar.",
@@ -184,5 +166,10 @@ export default async function handler(req, res) {
     });
   } catch (e) {
     return res.status(400).json({ sucesso: false, erro: e.message });
+  } finally {
+    // apaga o Blob em qualquer desfecho terminal (sucesso ou erro)
+    if (videoUrl) {
+      try { await del(videoUrl); } catch (_) {}
+    }
   }
 }
