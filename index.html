@@ -1166,7 +1166,7 @@ async function enviarCampanha(){
 
   // ── VÍDEO: Blob -> video-start -> polling video-status -> criar-campanha ──
   if(arq.type.startsWith('video/')){
-    if(arq.size>50*1024*1024){out.style.color='#f87171';out.textContent='❌ Vídeo muito grande. Limite: 50 MB.';return;}
+    if(arq.size>200*1024*1024){out.style.color='#f87171';out.textContent='❌ Vídeo muito grande. Limite: 200 MB.';return;}
     out.style.color='#fff';out.textContent='Validando duração do vídeo...';
     try{
       var duration=await new Promise(function(ok,rej){
@@ -1177,7 +1177,7 @@ async function enviarCampanha(){
         v.onerror=function(){URL.revokeObjectURL(url);rej(new Error('Não foi possível ler o vídeo.'));};
         v.src=url;
       });
-      if(duration>60){out.style.color='#f87171';out.textContent='❌ Vídeo muito longo ('+Math.ceil(duration)+'s). Limite: 60 segundos.';return;}
+      if(duration>300){out.style.color='#f87171';out.textContent='❌ Vídeo muito longo ('+Math.ceil(duration)+'s). Limite: 300 segundos.';return;}
 
       // 1. Sobe pro Blob
       out.textContent='Enviando vídeo para armazenamento...';

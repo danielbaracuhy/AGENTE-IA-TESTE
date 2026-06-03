@@ -14,7 +14,7 @@ export default async function handler(req, res) {
           'video/webm',
           'video/x-matroska',
         ],
-        maximumSizeInBytes: 50 * 1024 * 1024,
+        maximumSizeInBytes: 200 * 1024 * 1024,
       }),
       onUploadCompleted: async ({ blob }) => {
         console.log('blob upload completed:', blob.url);
