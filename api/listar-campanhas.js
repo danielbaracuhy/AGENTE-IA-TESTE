@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   try {
     const ACT = process.env.META_AD_ACCOUNT_ID;
     const qs = new URLSearchParams({
-      fields: 'name,status,effective_status,daily_budget',
+      fields: 'name,status,effective_status,ads.limit(1){effective_status}',
       limit: '100',
       access_token: process.env.META_ACCESS_TOKEN,
     });
@@ -21,7 +21,10 @@ export default async function handler(req, res) {
     const ignorar = new Set(['DELETED', 'ARCHIVED']);
     const campanhas = (data.data || [])
       .filter(c => !ignorar.has(c.effective_status))
-      .map(c => ({ id: c.id, nome: c.name, status: c.status, effective_status: c.effective_status }));
+      .map(c => {
+        const adEffective = c.ads?.data?.[0]?.effective_status ?? c.effective_status;
+        return { id: c.id, nome: c.name, status: c.status, effective_status: adEffective };
+      });
     return res.status(200).json({ campanhas });
   } catch (e) {
     return res.status(500).json({ erro: e.message });

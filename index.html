@@ -1315,10 +1315,11 @@ async function carregarCampanhas(){
 }
 
 function statusCamp(ef){
-  if(ef==='ACTIVE')return{label:'Ativo',cor:'#22c55e'};
+  if(ef==='ACTIVE')return{label:'Aprovado',cor:'#22c55e'};
   if(['PENDING_REVIEW','IN_PROCESS','PREAPPROVED'].indexOf(ef)>-1)return{label:'Em análise',cor:'#f59e0b'};
-  if(['DISAPPROVED','WITH_ISSUES'].indexOf(ef)>-1)return{label:'Reprovado / com problema',cor:'#ef4444'};
-  return{label:'Pausado',cor:'#94a3b8'};
+  if(['DISAPPROVED','WITH_ISSUES','PENDING_BILLING_INFO'].indexOf(ef)>-1)return{label:'Reprovado',cor:'#ef4444'};
+  if(['PAUSED','CAMPAIGN_PAUSED','ADSET_PAUSED'].indexOf(ef)>-1)return{label:'Pausado',cor:'#94a3b8'};
+  return{label:'Em análise',cor:'#f59e0b'};
 }
 
 function escCamp(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -1329,11 +1330,11 @@ function renderCampanhas(camps){
   lista.style.color='';
   lista.innerHTML=camps.map(function(c){
     var st=statusCamp(c.effective_status);
-    var podeAtivar=c.effective_status!=='ACTIVE';
+    var ativar=c.status==='PAUSED';
     return '<div data-id="'+c.id+'" data-nome="'+escCamp(c.nome)+'" style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">'
       +'<span style="flex:1;min-width:120px;color:var(--text)">'+escCamp(c.nome)+'</span>'
-      +'<span style="font-size:11px;font-weight:700;white-space:nowrap;color:'+st.cor+'">'+st.label+'</span>'
-      +'<button data-acao="'+(podeAtivar?'ativar':'pausar')+'" onclick="acaoCampanha(this)" style="padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:'+(podeAtivar?'#22c55e':'#94a3b8')+';color:#fff">'+(podeAtivar?'Ativar':'Pausar')+'</button>'
+      +'<span style="font-size:11px;font-weight:600;white-space:nowrap;padding:2px 8px;border-radius:20px;background:'+st.cor+'22;color:'+st.cor+'">'+st.label+'</span>'
+      +'<button data-acao="'+(ativar?'ativar':'pausar')+'" onclick="acaoCampanha(this)" style="padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:'+(ativar?'#4f7ef8':'#475569')+';color:#fff">'+(ativar?'Ativar':'Pausar')+'</button>'
       +'<button data-acao="excluir" onclick="acaoCampanha(this)" style="padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:#374151;color:#f87171">Excluir</button>'
       +'</div>';
   }).join('');
