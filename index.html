@@ -282,6 +282,16 @@ tr:hover td{background:var(--surface2)}
     <div class="feat">📊 Gráficos interativos</div>
   </div>
   <button class="btn btn-ghost" style="margin-top:8px" onclick="abrirModalCampanha()">➕ Criar Campanha</button>
+
+  <div id="sec-campanhas" style="width:100%;max-width:520px;margin-top:12px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-weight:700;font-size:15px">📋 Minhas Campanhas</span>
+        <button id="btn-carregar-camps" onclick="carregarCampanhas()" style="padding:6px 14px;border:none;border-radius:8px;background:var(--accent2);color:#fff;font-size:13px;font-weight:600;cursor:pointer">Carregar</button>
+      </div>
+      <div id="camps-lista" style="font-size:13px;color:var(--muted)">Clique em "Carregar" para ver suas campanhas.</div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ SCREEN 2: LOADING ═════════════════════════════ -->
@@ -1287,6 +1297,64 @@ async function enviarCampanha(){
     if(data.sucesso){out.style.color='#34d399';out.textContent='✅ '+data.mensagem+' (ID: '+data.campaign_id+')';}
     else{out.style.color='#f87171';out.textContent='❌ '+data.erro;}
   }catch(e){out.style.color='#f87171';out.textContent='❌ Falha de rede: '+e.message;}
+}
+
+// ── MINHAS CAMPANHAS ──────────────────────────────────────
+async function carregarCampanhas(){
+  var lista=document.getElementById('camps-lista');
+  var btn=document.getElementById('btn-carregar-camps');
+  lista.style.color='var(--muted)';lista.innerHTML='Carregando...';
+  btn.disabled=true;
+  try{
+    var r=await fetch('/api/listar-campanhas');
+    var d=await r.json();
+    if(!r.ok||d.erro){lista.style.color='#f87171';lista.innerHTML='❌ '+escCamp(d.erro||'Erro desconhecido.');return;}
+    renderCampanhas(d.campanhas);
+  }catch(e){lista.style.color='#f87171';lista.innerHTML='❌ Falha de rede: '+e.message;}
+  finally{btn.disabled=false;}
+}
+
+function statusCamp(ef){
+  if(ef==='ACTIVE')return{label:'Ativo',cor:'#22c55e'};
+  if(['PENDING_REVIEW','IN_PROCESS','PREAPPROVED'].indexOf(ef)>-1)return{label:'Em análise',cor:'#f59e0b'};
+  if(['DISAPPROVED','WITH_ISSUES'].indexOf(ef)>-1)return{label:'Reprovado / com problema',cor:'#ef4444'};
+  return{label:'Pausado',cor:'#94a3b8'};
+}
+
+function escCamp(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function renderCampanhas(camps){
+  var lista=document.getElementById('camps-lista');
+  if(!camps||!camps.length){lista.style.color='var(--muted)';lista.innerHTML='Nenhuma campanha encontrada.';return;}
+  lista.style.color='';
+  lista.innerHTML=camps.map(function(c){
+    var st=statusCamp(c.effective_status);
+    var podeAtivar=c.effective_status!=='ACTIVE';
+    return '<div data-id="'+c.id+'" data-nome="'+escCamp(c.nome)+'" style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">'
+      +'<span style="flex:1;min-width:120px;color:var(--text)">'+escCamp(c.nome)+'</span>'
+      +'<span style="font-size:11px;font-weight:700;white-space:nowrap;color:'+st.cor+'">'+st.label+'</span>'
+      +'<button data-acao="'+(podeAtivar?'ativar':'pausar')+'" onclick="acaoCampanha(this)" style="padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:'+(podeAtivar?'#22c55e':'#94a3b8')+';color:#fff">'+(podeAtivar?'Ativar':'Pausar')+'</button>'
+      +'<button data-acao="excluir" onclick="acaoCampanha(this)" style="padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:#374151;color:#f87171">Excluir</button>'
+      +'</div>';
+  }).join('');
+}
+
+async function acaoCampanha(btn){
+  var row=btn.closest('[data-id]');
+  var id=row.dataset.id;
+  var nome=row.dataset.nome;
+  var acao=btn.dataset.acao;
+  if(acao==='ativar'&&!confirm('Ativar "'+nome+'"?\nA campanha vai começar a gastar o orçamento.'))return;
+  if(acao==='excluir'&&!confirm('Excluir permanentemente "'+nome+'"?\nEssa ação não pode ser desfeita.'))return;
+  var setBtns=function(on){row.querySelectorAll('button').forEach(function(b){b.disabled=!on;});};
+  setBtns(false);
+  try{
+    var r=await fetch('/api/campanha-acao',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({campaignId:id,acao:acao})});
+    var d=await r.json();
+    if(!r.ok||!d.sucesso){alert('Erro: '+(d.erro||'resposta inesperada'));setBtns(true);return;}
+    if(acao==='excluir'){row.remove();return;}
+    carregarCampanhas();
+  }catch(e){alert('Falha de rede: '+e.message);setBtns(true);}
 }
 </script>
 </body>
