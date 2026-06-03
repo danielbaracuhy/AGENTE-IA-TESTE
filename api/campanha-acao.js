@@ -3,8 +3,8 @@ const GRAPH = `https://graph.facebook.com/${API_VERSION}`;
 
 export const config = { maxDuration: 30 };
 
-async function setStatus(id, status, token) {
-  const body = new URLSearchParams({ status, access_token: token });
+async function setStatus(id, status, token, extra = {}) {
+  const body = new URLSearchParams({ status, access_token: token, ...extra });
   const r = await fetch(`${GRAPH}/${id}`, { method: 'POST', body });
   const data = await r.json();
   if (!r.ok || data.error) {
@@ -45,6 +45,7 @@ export default async function handler(req, res) {
 
     if (acao === 'ativar' || acao === 'pausar') {
       const status = acao === 'ativar' ? 'ACTIVE' : 'PAUSED';
+      const adSetExtra = acao === 'ativar' ? { start_time: new Date().toISOString() } : {};
 
       const [adSetIds, adIds] = await Promise.all([
         getChildIds(campaignId, 'adsets', token),
@@ -53,7 +54,7 @@ export default async function handler(req, res) {
 
       const updates = [
         setStatus(campaignId, status, token),
-        ...adSetIds.map(id => setStatus(id, status, token)),
+        ...adSetIds.map(id => setStatus(id, status, token, adSetExtra)),
         ...adIds.map(id => setStatus(id, status, token)),
       ];
       await Promise.all(updates);
