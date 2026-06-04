@@ -261,22 +261,14 @@ tr:hover td{background:var(--surface2)}
 <div id="screen-upload">
   <div class="up-logo">📊</div>
   <h1 class="up-title">Analisador de Campanhas <span>Meta Ads</span></h1>
-  <p class="up-sub">Faça upload do seu relatório CSV do Meta Ads e receba uma análise completa em segundos</p>
+  <p class="up-sub">Acompanhe o desempenho das suas campanhas em tempo real.</p>
 
-  <div class="drop-zone" id="drop-zone">
-    <input type="file" id="file-input" accept=".csv">
-    <span class="dz-icon">📂</span>
-    <p class="dz-title">Arraste e solte seu CSV aqui</p>
-    <p class="dz-sub">ou clique para selecionar o arquivo</p>
-    <div id="file-name">📄 arquivo.csv</div>
-  </div>
-
-  <button class="btn-analyze" id="btn-analyze" disabled>
-    <span>🔍</span> Analisar Campanha
+  <button class="btn-analyze" id="btn-analyze" onclick="analyzeFromAPI()">
+    <span>🔍</span> Analisar em tempo real
   </button>
 
   <div class="up-features">
-    <div class="feat">🔒 100% no navegador</div>
+    <div class="feat">⏱ Tempo real</div>
     <div class="feat">⚡ Análise instantânea</div>
     <div class="feat">📥 Exporta PDF</div>
     <div class="feat">📊 Gráficos interativos</div>
@@ -1004,27 +996,45 @@ function analyze() {
 }
 
 // ═══════════════════════════════════════════════════════
+// TEMPO REAL — API
+// ═══════════════════════════════════════════════════════
+function processFromAPI(apiData) {
+  const camps = Array.isArray(apiData.campanhas) ? apiData.campanhas : [];
+  const periodo = apiData.periodo || 'Últimos 14 dias';
+  const sum = (k) => camps.reduce((a, c) => a + (c[k] || 0), 0);
+  const ti = sum('investido'), ta = sum('alcance'), tIm = sum('impressoes');
+  const tc = sum('cliques'), tlp = sum('lp_views'), tv = sum('conversoes');
+  const totals = {
+    ti, ta, tIm, tc, tlp, tv,
+    cpp_m: tv > 0 ? ti / tv : 0, ctr_m: tIm > 0 ? (tc / tIm) * 100 : 0,
+    conv_m: tlp > 0 ? (tv / tlp) * 100 : 0, clp_m: tc > 0 ? (tlp / tc) * 100 : 0,
+    cpc_m: tc > 0 ? ti / tc : 0,
+  };
+  const alerts = genAlerts(camps);
+  const recs = genRecs(camps, totals);
+  return { periodo, camps, totals, alerts, recs };
+}
+
+async function analyzeFromAPI() {
+  try {
+    const r = await fetch('/api/insights-campanhas');
+    const apiData = await r.json();
+    if (!r.ok) throw new Error(apiData.error || 'Erro ao buscar métricas.');
+    if (!apiData.campanhas || apiData.campanhas.length === 0) {
+      alert('Nenhuma campanha com entrega nos últimos 14 dias.'); return;
+    }
+    const data = processFromAPI(apiData);
+    runLoader(() => { render(data, 'Tempo Real'); screen('screen-dashboard'); });
+  } catch (e) { alert('⚠️ ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
-  const dz = document.getElementById('drop-zone');
-  const fi = document.getElementById('file-input');
-
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
-  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
-  dz.addEventListener('drop', e => {
-    e.preventDefault(); dz.classList.remove('over');
-    if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
-  });
-  fi.addEventListener('change', e => { if (e.target.files[0]) setFile(e.target.files[0]); });
-  document.getElementById('btn-analyze').addEventListener('click', analyze);
-
   document.getElementById('btn-new').addEventListener('click', () => {
     destroyCharts();
     S.file = null; S.data = null;
-    fi.value = '';
-    document.getElementById('file-name').style.display = 'none';
-    document.getElementById('btn-analyze').disabled = true;
     screen('screen-upload');
   });
 
