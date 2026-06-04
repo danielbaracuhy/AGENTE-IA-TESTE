@@ -1227,15 +1227,27 @@ document.addEventListener('keydown', e => {
   </div>
 </div>
 <script>
-function abrirModalCampanha(){document.getElementById('modalCampanha').style.display='flex';atualizaDestino();atualizaAlcance();if(!document.querySelectorAll('#c-cidades-lista .cidade-row').length)addCidade();}
+var _imgFile=null, _vidFile=null;
+function abrirModalCampanha(){
+  _imgFile=null; _vidFile=null;
+  document.getElementById('c-imagem').value='';
+  document.getElementById('c-video').value='';
+  document.getElementById('c-resultado').textContent='';
+  document.getElementById('modalCampanha').style.display='flex';
+  atualizaDestino();
+  atualizaAlcance();
+  if(!document.querySelectorAll('#c-cidades-lista .cidade-row').length)addCidade();
+  document.getElementById('c-imagem').onchange=function(){_imgFile=this.files[0]||null;};
+  document.getElementById('c-video').onchange=function(){_vidFile=this.files[0]||null;};
+}
 function fecharModalCampanha(){document.getElementById('modalCampanha').style.display='none';}
 function atualizaDestino(){var site=document.getElementById('c-destino').value==='site';document.getElementById('c-wrap-link').style.display=site?'block':'none';}
 function atualizaAlcance(){var v=document.getElementById('c-alcance').value;document.getElementById('c-wrap-estados').style.display=v==='estados'?'block':'none';document.getElementById('c-wrap-cidades').style.display=v==='cidades'?'block':'none';}
 function addCidade(){var div=document.createElement('div');div.className='cidade-row';div.style.cssText='display:flex;gap:6px;margin-bottom:6px';div.innerHTML='<input class="cidade-nome" placeholder="Cidade" style="flex:2;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff"><input class="cidade-raio" type="number" value="70" min="1" max="70" style="flex:1;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff"><button type="button" onclick="this.parentNode.remove()" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:18px">×</button>';document.getElementById('c-cidades-lista').appendChild(div);}
 async function enviarCampanha(){
   var out=document.getElementById('c-resultado');
-  var arqImagem=document.getElementById('c-imagem').files[0];
-  var arqVideo=document.getElementById('c-video').files[0];
+  var arqImagem=_imgFile;
+  var arqVideo=_vidFile;
   if(!arqImagem&&!arqVideo){out.style.color='#f87171';out.textContent='Adicione ao menos 1 criativo (imagem ou vídeo).';return;}
 
   var criativos=[];
