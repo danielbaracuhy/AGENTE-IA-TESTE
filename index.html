@@ -1397,6 +1397,7 @@ function renderCampanhas(camps){
       +'<span style="font-size:11px;font-weight:600;white-space:nowrap;padding:2px 8px;border-radius:20px;background:'+st.cor+'22;color:'+st.cor+'">'+st.label+'</span>'
       +'<button data-acao="'+(ativar?'ativar':'pausar')+'" onclick="acaoCampanha(this)" style="padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:'+(ativar?'#4f7ef8':'#475569')+';color:#fff">'+(ativar?'Ativar':'Pausar')+'</button>'
       +'<button data-acao="excluir" onclick="acaoCampanha(this)" style="padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:#374151;color:#f87171">Excluir</button>'
+      +'<button onclick="abrirEscalar(\''+c.id+'\',\''+escCamp(c.nome)+'\')" style="padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:#065f46;color:#6ee7b7">Escalar</button>'
       +'</div>';
   }).join('');
 }
@@ -1418,6 +1419,58 @@ async function acaoCampanha(btn){
     carregarCampanhas();
   }catch(e){alert('Falha de rede: '+e.message);setBtns(true);}
 }
+
+let escCampanhaId = null;
+function abrirEscalar(id, nome){
+  escCampanhaId = id;
+  document.getElementById('esc-titulo').textContent = 'Escalar: ' + (nome || 'campanha');
+  document.getElementById('esc-status').textContent = '';
+  document.getElementById('esc-valor').value = '';
+  document.getElementById('modal-escalar').style.display = 'flex';
+}
+function fecharEscalar(){ document.getElementById('modal-escalar').style.display='none'; escCampanhaId=null; }
+async function aplicarEscala(payload){
+  const status = document.getElementById('esc-status');
+  status.style.color='#8b9bc4'; status.textContent='Aplicando...';
+  try{
+    const r = await fetch('/api/escalar-campanha', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ campaign_id: escCampanhaId, ...payload })
+    });
+    const data = await r.json();
+    if(!r.ok || !data.ok) throw new Error(data.error || 'Falha ao escalar.');
+    status.style.color='#4caf7d';
+    status.textContent = `Orçamento: R$ ${data.anteriorReais.toFixed(2)} → R$ ${data.novoReais.toFixed(2)} (${data.nivel}).`;
+    if (typeof carregarCampanhas === 'function') carregarCampanhas();
+  }catch(e){ status.style.color='#ff9aa2'; status.textContent='⚠️ '+e.message; }
+}
+function escalarCampanha(pct){
+  if(pct>=50 && !confirm('Aumentos de +50% podem reiniciar a fase de aprendizado do Meta e instabilizar os resultados por alguns dias. Continuar?')) return;
+  aplicarEscala({ pct });
+}
+function escalarCampanhaValor(){
+  const v = parseFloat(document.getElementById('esc-valor').value);
+  if(!v || v<=0){ document.getElementById('esc-status').textContent='Informe um valor válido.'; return; }
+  aplicarEscala({ valor: v });
+}
 </script>
+
+<div id="modal-escalar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#141b2d;border:1px solid #20293f;border-radius:14px;padding:22px;max-width:380px;width:90%;color:#e8ecf4;">
+    <h3 id="esc-titulo" style="margin:0 0 4px;font-size:16px;">Escalar campanha</h3>
+    <p style="margin:0 0 16px;font-size:13px;color:#8b9bc4;">Aumente o orçamento para alcançar mais pessoas.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn-analyze" onclick="escalarCampanha(20)">+20% (recomendado)</button>
+      <button class="btn-analyze" onclick="escalarCampanha(50)">+50% ⚠️</button>
+      <p style="margin:2px 0 6px;font-size:11px;color:#e0b34d;">+50% pode reiniciar a fase de aprendizado do Meta e deixar os resultados instáveis por alguns dias.</p>
+      <div style="display:flex;gap:6px;">
+        <input id="esc-valor" type="number" min="1" placeholder="Valor diário (R$)" style="flex:1;padding:8px;border-radius:8px;border:1px solid #20293f;background:#0e1424;color:#e8ecf4;">
+        <button class="btn-analyze" onclick="escalarCampanhaValor()">Aplicar</button>
+      </div>
+    </div>
+    <div id="esc-status" style="margin-top:12px;font-size:13px;"></div>
+    <button onclick="fecharEscalar()" style="margin-top:14px;background:transparent;border:0;color:#8b9bc4;cursor:pointer;font-size:13px;">Fechar</button>
+  </div>
+</div>
 </body>
 </html>
