@@ -122,7 +122,6 @@ export default async function handler(req, res) {
       targeting: JSON.stringify(targeting),
       status: "PAUSED",
       start_time: new Date(Date.now() + 86400000).toISOString(),
-      end_time: new Date(Date.now() + 15 * 86400000).toISOString(),
     };
     if (cfg.destinoWhatsApp) {
       adsetParams.destination_type = "WHATSAPP";
