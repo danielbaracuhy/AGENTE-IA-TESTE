@@ -226,6 +226,12 @@ tr:hover td{background:var(--surface2)}
   .btn{padding:6px 10px;font-size:11px}
 }
 
+/* Criativos */
+.criativo-thumb{ width:80px; height:60px; object-fit:cover; border-radius:8px; background:var(--surface); flex:0 0 auto; }
+.criativo-card{ display:flex; gap:14px; align-items:center; margin-bottom:10px; }
+.btn-excluir-criativo{padding:6px 12px;border:1px solid rgba(239,68,68,.3);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:rgba(239,68,68,.15);color:var(--red);white-space:nowrap;flex-shrink:0}
+.btn-excluir-criativo:hover{background:rgba(239,68,68,.3)}
+
 /* ── MODAL CRIAR CAMPANHA ─────────────────────────────── */
 #modal-campanha{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.75);backdrop-filter:blur(4px)}
 .mc-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);width:100%;max-width:600px;max-height:90vh;overflow-y:auto}
@@ -371,6 +377,11 @@ tr:hover td{background:var(--surface2)}
       <div class="tbl-wrap">
         <table><thead id="tbl-head"></thead><tbody id="tbl-body"></tbody></table>
       </div>
+    </div>
+
+    <div class="section" id="sec-criativos" style="display:none">
+      <div class="sec-title">Comparação de Criativos</div>
+      <div id="criativos-grid"></div>
     </div>
 
     <div class="section">
@@ -739,6 +750,9 @@ function render(data, fname) {
      </div>`).join('');
 
   renderCharts(data);
+  const _campSel = document.getElementById('rt-campanha')?.value;
+  if (_campSel) renderCriativos(_campSel);
+  else { const s=document.getElementById('sec-criativos'); if(s) s.style.display='none'; }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1078,6 +1092,47 @@ async function buscarEAnalisar(primeiraVez) {
 
 function analyzeFromAPI() { buscarEAnalisar(true); }
 function atualizarAnalise() { buscarEAnalisar(false); }
+
+// ═══════════════════════════════════════════════════════
+// CRIATIVOS
+// ═══════════════════════════════════════════════════════
+async function renderCriativos(campanhaId){
+  const sec=document.getElementById('sec-criativos'); const grid=document.getElementById('criativos-grid');
+  sec.style.display=''; grid.innerHTML='Carregando criativos...';
+  try{
+    const qs=montarQueryAnalise();
+    const r=await fetch('/api/insights-anuncios?'+qs); const data=await r.json();
+    if(!r.ok) throw new Error(data.error||'Erro ao buscar criativos.');
+    const ans=data.anuncios||[];
+    if(!ans.length){ grid.innerHTML='Nenhum anúncio nesta campanha.'; return; }
+    const podeExcluir=ans.length>1;
+    let melhorId=null,melhor=-1; ans.forEach(a=>{ if(a.comDados&&a.ctr>melhor){melhor=a.ctr;melhorId=a.id;} });
+    grid.innerHTML=ans.map(a=>`
+      <div class="card criativo-card">
+        ${a.thumbnail?`<img class="criativo-thumb" src="${a.thumbnail}">`:`<div class="criativo-thumb"></div>`}
+        <div style="flex:1">
+          <div style="font-weight:600;margin-bottom:6px">${a.nome} ${a.id===melhorId?'<span class="badge bg-green">Melhor desempenho</span>':''}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <span class="badge ${ctrClass(a.ctr)}">CTR ${a.ctr.toFixed(2)}%</span>
+            <span class="badge ${a.conversoes>0?'bg-green':'bg-red'}">${a.conversoes} conv.</span>
+            <span class="badge ${a.cpp>0?cppClass(a.cpp):'bg-blue'}">${a.cpp>0?('CPP R$ '+a.cpp.toFixed(2)):'sem conv.'}</span>
+          </div>
+        </div>
+        ${podeExcluir?`<button class="btn-excluir-criativo" data-id="${a.id}" data-nome="${(a.nome||'').replace(/"/g,'&quot;')}" data-ctr="${a.ctr.toFixed(2)}" data-conv="${a.conversoes}" data-camp="${campanhaId}">Excluir</button>`:''}
+      </div>`).join('');
+    grid.querySelectorAll('.btn-excluir-criativo').forEach(b=>b.addEventListener('click',()=>
+      excluirAnuncio(b.dataset.id,b.dataset.nome,b.dataset.camp,b.dataset.ctr,b.dataset.conv)));
+  }catch(e){ grid.innerHTML='⚠️ '+e.message; }
+}
+async function excluirAnuncio(adId,nome,campanhaId,ctr,conv){
+  if(!confirm(`Excluir o anúncio "${nome}" (CTR ${ctr}%, ${conv} conversões)? Esta ação é permanente.`)) return;
+  try{
+    const r=await fetch('/api/anuncio-acao',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ad_id:adId})});
+    const data=await r.json();
+    if(!r.ok||!data.sucesso) throw new Error(data.error||'Falha ao excluir.');
+    renderCriativos(campanhaId);
+  }catch(e){ alert('⚠️ '+e.message); }
+}
 
 // ═══════════════════════════════════════════════════════
 // INIT
