@@ -323,6 +323,22 @@ tr:hover td{background:var(--surface2)}
   <div class="dash-body">
     <div class="dash-meta" id="ds-meta"></div>
 
+    <div class="rt-controls" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0;">
+      <select id="rt-periodo" onchange="toggleDatasCustom()" style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:12px;padding:7px 10px;outline:none;">
+        <option value="last_7d">Últimos 7 dias</option>
+        <option value="last_14d" selected>Últimos 14 dias</option>
+        <option value="last_30d">Últimos 30 dias</option>
+        <option value="this_month">Este mês</option>
+        <option value="last_month">Mês passado</option>
+        <option value="maximum">Máximo</option>
+        <option value="custom">Personalizado…</option>
+      </select>
+      <input type="date" id="rt-since" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:12px;padding:7px 10px;outline:none;">
+      <input type="date" id="rt-until" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:12px;padding:7px 10px;outline:none;">
+      <select id="rt-campanha" style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:12px;padding:7px 10px;outline:none;"><option value="">Todas as campanhas</option></select>
+      <button class="btn btn-primary" onclick="atualizarAnalise()">Atualizar</button>
+    </div>
+
     <div class="section">
       <p class="sec-title">📌 Métricas Principais</p>
       <div class="kpi-grid" id="kpi-grid"></div>
@@ -1000,7 +1016,8 @@ function analyze() {
 // ═══════════════════════════════════════════════════════
 function processFromAPI(apiData) {
   const camps = Array.isArray(apiData.campanhas) ? apiData.campanhas : [];
-  const periodo = apiData.periodo || 'Últimos 14 dias';
+  // periodo como objeto {inicio,fim} para render() exibir corretamente
+  const periodo = { inicio: apiData.inicio || '', fim: apiData.fim || '' };
   const sum = (k) => camps.reduce((a, c) => a + (c[k] || 0), 0);
   const ti = sum('investido'), ta = sum('alcance'), tIm = sum('impressoes');
   const tc = sum('cliques'), tlp = sum('lp_views'), tv = sum('conversoes');
@@ -1015,18 +1032,52 @@ function processFromAPI(apiData) {
   return { periodo, camps, totals, alerts, recs };
 }
 
-async function analyzeFromAPI() {
+function toggleDatasCustom() {
+  const custom = document.getElementById('rt-periodo').value === 'custom';
+  document.getElementById('rt-since').style.display = custom ? '' : 'none';
+  document.getElementById('rt-until').style.display = custom ? '' : 'none';
+}
+
+function montarQueryAnalise() {
+  const p = document.getElementById('rt-periodo')?.value || 'last_14d';
+  const campId = document.getElementById('rt-campanha')?.value || '';
+  const params = new URLSearchParams();
+  if (p === 'custom') {
+    const since = document.getElementById('rt-since')?.value;
+    const until = document.getElementById('rt-until')?.value;
+    if (since && until) { params.set('since', since); params.set('until', until); }
+    else params.set('preset', 'last_14d');
+  } else params.set('preset', p);
+  if (campId) params.set('campaign_id', campId);
+  return params.toString();
+}
+
+function popularCampanhas(lista) {
+  const sel = document.getElementById('rt-campanha');
+  if (!sel || !Array.isArray(lista)) return;
+  const atual = sel.value;
+  sel.innerHTML = '<option value="">Todas as campanhas</option>' +
+    lista.map(c => '<option value="' + c.id + '">' + c.nome + '</option>').join('');
+  sel.value = atual;
+}
+
+async function buscarEAnalisar(primeiraVez) {
   try {
-    const r = await fetch('/api/insights-campanhas');
+    const qs = primeiraVez ? 'preset=last_14d' : montarQueryAnalise();
+    const r = await fetch('/api/insights-campanhas?' + qs);
     const apiData = await r.json();
     if (!r.ok) throw new Error(apiData.error || 'Erro ao buscar métricas.');
+    popularCampanhas(apiData.campanhasDisponiveis);
     if (!apiData.campanhas || apiData.campanhas.length === 0) {
-      alert('Nenhuma campanha com entrega nos últimos 14 dias.'); return;
+      alert('Nenhuma campanha com entrega no período selecionado.'); return;
     }
     const data = processFromAPI(apiData);
-    runLoader(() => { render(data, 'Tempo Real'); screen('screen-dashboard'); });
+    runLoader(() => { render(data, 'Tempo Real'); if (primeiraVez) screen('screen-dashboard'); });
   } catch (e) { alert('⚠️ ' + e.message); }
 }
+
+function analyzeFromAPI() { buscarEAnalisar(true); }
+function atualizarAnalise() { buscarEAnalisar(false); }
 
 // ═══════════════════════════════════════════════════════
 // INIT
