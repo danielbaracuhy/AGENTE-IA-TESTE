@@ -1193,7 +1193,9 @@ document.addEventListener('keydown', e => {
         </select>
       </label>
       <label id="c-wrap-link" style="display:none">Link do site<input id="c-link" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff;margin-top:4px" placeholder="https://..."></label>
-      <label>Criativo (imagem ou vídeo)<input id="c-imagem" type="file" accept="image/*,video/mp4,video/quicktime,video/webm" style="width:100%;margin-top:4px"></label>
+      <label>Imagem do anúncio<input id="c-imagem" type="file" accept="image/*" style="width:100%;margin-top:4px"></label>
+      <label>Vídeo do anúncio (opcional)<input id="c-video" type="file" accept="video/mp4,video/quicktime,video/webm" style="width:100%;margin-top:4px"></label>
+      <p style="margin:0;font-size:12px;color:#94a3b8">Adicione 1 imagem e/ou 1 vídeo (mínimo 1). Se colocar os dois, eles competem na mesma campanha para você ver qual performa melhor. O texto é o mesmo para os dois.</p>
       <label>Texto do anúncio<textarea id="c-texto" rows="3" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff;margin-top:4px"></textarea></label>
       <label>Orçamento por dia (R$)<input id="c-orcamento" type="number" value="20" min="6" style="width:100%;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff;margin-top:4px"></label>
       <label>Alcance do anúncio
@@ -1232,15 +1234,25 @@ function atualizaAlcance(){var v=document.getElementById('c-alcance').value;docu
 function addCidade(){var div=document.createElement('div');div.className='cidade-row';div.style.cssText='display:flex;gap:6px;margin-bottom:6px';div.innerHTML='<input class="cidade-nome" placeholder="Cidade" style="flex:2;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff"><input class="cidade-raio" type="number" value="70" min="1" max="70" style="flex:1;padding:8px;border-radius:6px;border:1px solid #444;background:#0f0f1e;color:#fff"><button type="button" onclick="this.parentNode.remove()" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:18px">×</button>';document.getElementById('c-cidades-lista').appendChild(div);}
 async function enviarCampanha(){
   var out=document.getElementById('c-resultado');
-  var arq=document.getElementById('c-imagem').files[0];
-  if(!arq){out.style.color='#f87171';out.textContent='Selecione uma imagem ou vídeo.';return;}
+  var arqImagem=document.getElementById('c-imagem').files[0];
+  var arqVideo=document.getElementById('c-video').files[0];
+  if(!arqImagem&&!arqVideo){out.style.color='#f87171';out.textContent='Adicione ao menos 1 criativo (imagem ou vídeo).';return;}
 
-  // ── VÍDEO: Blob -> video-start -> polling video-status -> criar-campanha ──
-  if(arq.type.startsWith('video/')){
-    if(arq.size>200*1024*1024){out.style.color='#f87171';out.textContent='❌ Vídeo muito grande. Limite: 200 MB.';return;}
+  var criativos=[];
+  var videoUrl=null;
+
+  // ── IMAGEM ──
+  if(arqImagem){
+    out.style.color='#fff';out.textContent='Processando imagem...';
+    var imagemBase64=await new Promise(function(ok){var r=new FileReader();r.onload=function(){ok(r.result.split(',')[1]);};r.readAsDataURL(arqImagem);});
+    criativos.push({tipo:'imagem',imagemBase64:imagemBase64});
+  }
+
+  // ── VÍDEO: Blob -> video-start -> polling video-status ──
+  if(arqVideo){
+    if(arqVideo.size>200*1024*1024){out.style.color='#f87171';out.textContent='❌ Vídeo muito grande. Limite: 200 MB.';return;}
     out.style.color='#fff';out.textContent='Validando duração do vídeo...';
 
-    // barra de progresso — criada aqui, só para o fluxo de vídeo
     var progWrap=document.createElement('div');
     progWrap.style.cssText='width:100%;background:#374151;border-radius:6px;margin-top:6px;height:8px;overflow:hidden';
     var progInner=document.createElement('div');
@@ -1252,7 +1264,7 @@ async function enviarCampanha(){
 
     try{
       var duration=await new Promise(function(ok,rej){
-        var url=URL.createObjectURL(arq);
+        var url=URL.createObjectURL(arqVideo);
         var v=document.createElement('video');
         v.preload='metadata';
         v.onloadedmetadata=function(){URL.revokeObjectURL(url);ok(v.duration);};
@@ -1261,12 +1273,11 @@ async function enviarCampanha(){
       });
       if(duration>300){out.style.color='#f87171';out.textContent='❌ Vídeo muito longo ('+Math.ceil(duration)+'s). Limite: 300 segundos.';return;}
 
-      // 1. Sobe pro Blob com barra de progresso
       out.textContent='Enviando vídeo 0%...';
       out.insertAdjacentElement('afterend',progWrap);
       document.head.appendChild(progStyle);
       var mod=await import('https://esm.sh/@vercel/blob/client');
-      var blob=await mod.upload(arq.name,arq,{
+      var blob=await mod.upload(arqVideo.name,arqVideo,{
         access:'public',
         handleUploadUrl:'/api/blob-upload',
         onUploadProgress:function(p){
@@ -1274,9 +1285,8 @@ async function enviarCampanha(){
           progInner.style.width=p.percentage+'%';
         }
       });
-      var videoUrl=blob.url;
+      videoUrl=blob.url;
 
-      // 2. Registra o vídeo no Meta — barra vira indeterminada (pulso)
       progInner.style.transition='none';
       progInner.style.width='100%';
       progInner.style.animation='c-pulse 1.2s ease-in-out infinite';
@@ -1286,7 +1296,6 @@ async function enviarCampanha(){
       if(!startRes.ok||startData.erro){out.style.color='#f87171';out.textContent='❌ '+startData.erro;limparProg();return;}
       var videoId=startData.videoId;
 
-      // 3. Polling de status no cliente (~3s por ciclo, limite 5 min = 100 tentativas)
       out.textContent='Processando vídeo no Meta...';
       var pronto=false;
       for(var i=0;i<100;i++){
@@ -1300,40 +1309,13 @@ async function enviarCampanha(){
         fetch('/api/blob-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({videoUrl:videoUrl})});
         out.style.color='#f87171';out.textContent='❌ Timeout: vídeo não ficou pronto em 5 minutos. Tente de novo.';limparProg();return;
       }
-
-      // 4. Cria campanha com videoId já pronto
       limparProg();
-      out.textContent='Publicando no Meta...';
-      var estados=document.getElementById('c-estados').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
-      var cidades=[].slice.call(document.querySelectorAll('#c-cidades-lista .cidade-row')).map(function(row){return {nome:row.querySelector('.cidade-nome').value.trim(),raio:Number(row.querySelector('.cidade-raio').value)||70};}).filter(function(c){return c.nome;});
-      var plataformas=[].slice.call(document.querySelectorAll('.c-plat:checked')).map(function(c){return c.value;});
-      var payload={
-        nome:document.getElementById('c-nome').value,
-        destino:document.getElementById('c-destino').value,
-        link:document.getElementById('c-link').value,
-        videoId:videoId,
-        videoUrl:videoUrl,
-        texto:document.getElementById('c-texto').value,
-        orcamentoDiario:document.getElementById('c-orcamento').value,
-        alcance:document.getElementById('c-alcance').value,
-        estados:estados,
-        cidades:cidades,
-        idadeMin:Number(document.getElementById('c-idade-min').value),
-        idadeMax:Number(document.getElementById('c-idade-max').value),
-        generos:[],
-        plataformas:plataformas
-      };
-      var campRes=await fetch('/api/criar-campanha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      var campData=await campRes.json();
-      if(campData.sucesso){out.style.color='#34d399';out.textContent='✅ '+campData.mensagem+' (ID: '+campData.campaign_id+')';}
-      else{out.style.color='#f87171';out.textContent='❌ '+campData.erro;}
-    }catch(e){out.style.color='#f87171';out.textContent='❌ Erro: '+e.message;limparProg();}
-    return;
+      criativos.push({tipo:'video',videoId:videoId});
+    }catch(e){out.style.color='#f87171';out.textContent='❌ Erro: '+e.message;limparProg();return;}
   }
 
-  // ── IMAGEM: fluxo original sem alteração ──────────────────────
-  out.style.color='#fff';out.textContent='Criando campanha... (4 etapas no Meta)';
-  var imagemBase64=await new Promise(function(ok){var r=new FileReader();r.onload=function(){ok(r.result.split(',')[1]);};r.readAsDataURL(arq);});
+  // ── Publicar no Meta ──
+  out.textContent='Publicando no Meta...';
   var estados=document.getElementById('c-estados').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
   var cidades=[].slice.call(document.querySelectorAll('#c-cidades-lista .cidade-row')).map(function(row){return {nome:row.querySelector('.cidade-nome').value.trim(),raio:Number(row.querySelector('.cidade-raio').value)||70};}).filter(function(c){return c.nome;});
   var plataformas=[].slice.call(document.querySelectorAll('.c-plat:checked')).map(function(c){return c.value;});
@@ -1341,7 +1323,6 @@ async function enviarCampanha(){
     nome:document.getElementById('c-nome').value,
     destino:document.getElementById('c-destino').value,
     link:document.getElementById('c-link').value,
-    imagemBase64:imagemBase64,
     texto:document.getElementById('c-texto').value,
     orcamentoDiario:document.getElementById('c-orcamento').value,
     alcance:document.getElementById('c-alcance').value,
@@ -1350,7 +1331,9 @@ async function enviarCampanha(){
     idadeMin:Number(document.getElementById('c-idade-min').value),
     idadeMax:Number(document.getElementById('c-idade-max').value),
     generos:[],
-    plataformas:plataformas
+    plataformas:plataformas,
+    criativos:criativos,
+    videoUrl:videoUrl
   };
   try{
     var res=await fetch('/api/criar-campanha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});

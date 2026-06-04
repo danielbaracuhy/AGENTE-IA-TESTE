@@ -48,6 +48,7 @@ export default async function handler(req, res) {
   const {
     nome, destino, link, imagemBase64, videoId, videoUrl, texto, orcamentoDiario,
     alcance, estados, cidades, idadeMin, idadeMax, generos, plataformas,
+    criativos: creativosRaw,
   } = req.body || {};
   try {
     const cfg = DESTINOS[destino];
@@ -60,39 +61,16 @@ export default async function handler(req, res) {
     const reaisEmCentavos = Math.round(Number(orcamentoDiario) * 100);
     const waLink = `https://wa.me/${process.env.META_WHATSAPP_NUMBER}`;
 
-    // 1) Criativo: monta object_story_spec conforme tipo de mídia
-    let creativeSpec;
+    // Build criativos list — new format or fallback to legacy single-creative fields
+    const criativos = (creativosRaw && creativosRaw.length)
+      ? creativosRaw
+      : imagemBase64
+        ? [{ tipo: 'imagem', imagemBase64 }]
+        : videoId
+          ? [{ tipo: 'video', videoId }]
+          : [];
 
-    if (videoId) {
-      // vídeo já está "ready" — polling foi feito no cliente via /api/video-status
-      // a) Capa automática: preferred thumbnail ou primeiro disponível
-      const thumbs = await metaGet(`${videoId}/thumbnails`, {}, "thumbnails do vídeo");
-      const preferred = (thumbs.data || []).find(t => t.is_preferred) || thumbs.data?.[0];
-      if (!preferred) throw new Error("[thumbnails do vídeo] Nenhuma thumbnail disponível.");
-
-      // b) video_data com call_to_action por destino
-      const cta = cfg.destinoWhatsApp
-        ? { type: "WHATSAPP_MESSAGE" }
-        : { type: "LEARN_MORE", value: { link } };
-
-      creativeSpec = {
-        page_id: process.env.META_PAGE_ID,
-        video_data: { video_id: videoId, message: texto, image_url: preferred.uri, call_to_action: cta },
-      };
-    } else {
-      // Imagem: fluxo original intacto
-      const img = await metaPost(`${ACT}/adimages`, { bytes: imagemBase64 }, "upload da imagem");
-      const imageHash = Object.values(img.images)[0].hash;
-      creativeSpec = {
-        page_id: process.env.META_PAGE_ID,
-        link_data: {
-          image_hash: imageHash, message: texto,
-          ...(cfg.destinoWhatsApp
-            ? { link: waLink, call_to_action: { type: "WHATSAPP_MESSAGE" } }
-            : { link, call_to_action: { type: "LEARN_MORE", value: { link } } }),
-        },
-      };
-    }
+    if (!criativos.length) throw new Error("Nenhum criativo recebido.");
 
     // 2) campanha — ORÇAMENTO NA CAMPANHA (CBO)
     const campanha = await metaPost(`${ACT}/campaigns`, {
@@ -148,21 +126,56 @@ export default async function handler(req, res) {
     }
     const adset = await metaPost(`${ACT}/adsets`, adsetParams, "criar conjunto de anúncios");
 
-    // 4) criativo + anúncio
-    const creative = await metaPost(`${ACT}/adcreatives`, {
-      name: `${nome} - Criativo`,
-      object_story_spec: JSON.stringify(creativeSpec),
-    }, "criar criativo");
+    // 4) criativo + anúncio para cada item da lista
+    const anunciosCriados = [];
+    for (let i = 0; i < criativos.length; i++) {
+      const item = criativos[i];
+      let creativeSpec;
+      if (item.tipo === 'imagem') {
+        const img = await metaPost(`${ACT}/adimages`, { bytes: item.imagemBase64 }, "upload da imagem");
+        const imageHash = Object.values(img.images)[0].hash;
+        creativeSpec = {
+          page_id: process.env.META_PAGE_ID,
+          link_data: {
+            image_hash: imageHash, message: texto,
+            ...(cfg.destinoWhatsApp
+              ? { link: waLink, call_to_action: { type: "WHATSAPP_MESSAGE" } }
+              : { link, call_to_action: { type: "LEARN_MORE", value: { link } } }),
+          },
+        };
+      } else if (item.tipo === 'video') {
+        const thumbs = await metaGet(`${item.videoId}/thumbnails`, {}, "thumbnails do vídeo");
+        const preferred = (thumbs.data || []).find(t => t.is_preferred) || thumbs.data?.[0];
+        if (!preferred) throw new Error("[thumbnails do vídeo] Nenhuma thumbnail disponível.");
+        const cta = cfg.destinoWhatsApp
+          ? { type: "WHATSAPP_MESSAGE" }
+          : { type: "LEARN_MORE", value: { link } };
+        creativeSpec = {
+          page_id: process.env.META_PAGE_ID,
+          video_data: { video_id: item.videoId, message: texto, image_url: preferred.uri, call_to_action: cta },
+        };
+      } else {
+        throw new Error(`Tipo de criativo inválido: ${item.tipo}`);
+      }
 
-    const anuncio = await metaPost(`${ACT}/ads`, {
-      name: `${nome} - Anúncio`, adset_id: adset.id,
-      creative: JSON.stringify({ creative_id: creative.id }), status: "PAUSED",
-    }, "criar anúncio");
+      const creative = await metaPost(`${ACT}/adcreatives`, {
+        name: `${nome} - Criativo ${i + 1}`,
+        object_story_spec: JSON.stringify(creativeSpec),
+      }, "criar criativo");
+
+      const anuncio = await metaPost(`${ACT}/ads`, {
+        name: `${nome} - Anúncio ${i + 1}`, adset_id: adset.id,
+        creative: JSON.stringify({ creative_id: creative.id }), status: "PAUSED",
+      }, "criar anúncio");
+
+      anunciosCriados.push(anuncio.id);
+    }
 
     return res.status(200).json({
       sucesso: true,
       mensagem: "Campanha criada e PAUSADA. Revise no Gerenciador de Anúncios antes de ativar.",
-      campaign_id: campanha.id, adset_id: adset.id, creative_id: creative.id, ad_id: anuncio.id,
+      campaign_id: campanha.id, adset_id: adset.id,
+      ad_ids: anunciosCriados, ad_id: anunciosCriados[0],
     });
   } catch (e) {
     return res.status(400).json({ sucesso: false, erro: e.message });
