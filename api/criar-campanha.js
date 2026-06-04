@@ -27,7 +27,9 @@ async function metaPost(path, params, etapa) {
   const data = await res.json();
   if (!res.ok || data.error) {
     const msg = data.error?.error_user_msg || data.error?.message || "erro desconhecido";
-    throw new Error(`[${etapa}] ${msg}`);
+    const err = new Error(`[${etapa}] ${msg}`);
+    err.metaError = data.error;
+    throw err;
   }
   return data;
 }
@@ -38,7 +40,9 @@ async function metaGet(path, params, etapa) {
   const data = await res.json();
   if (!res.ok || data.error) {
     const msg = data.error?.error_user_msg || data.error?.message || "erro desconhecido";
-    throw new Error(`[${etapa}] ${msg}`);
+    const err = new Error(`[${etapa}] ${msg}`);
+    err.metaError = data.error;
+    throw err;
   }
   return data;
 }
@@ -130,9 +134,10 @@ export default async function handler(req, res) {
     const anunciosCriados = [];
     for (let i = 0; i < criativos.length; i++) {
       const item = criativos[i];
+      const label = `criativo ${i + 1} (${item.tipo})`;
       let creativeSpec;
       if (item.tipo === 'imagem') {
-        const img = await metaPost(`${ACT}/adimages`, { bytes: item.imagemBase64 }, "upload da imagem");
+        const img = await metaPost(`${ACT}/adimages`, { bytes: item.imagemBase64 }, `${label}: upload`);
         const imageHash = Object.values(img.images)[0].hash;
         creativeSpec = {
           page_id: process.env.META_PAGE_ID,
@@ -144,9 +149,9 @@ export default async function handler(req, res) {
           },
         };
       } else if (item.tipo === 'video') {
-        const thumbs = await metaGet(`${item.videoId}/thumbnails`, {}, "thumbnails do vídeo");
+        const thumbs = await metaGet(`${item.videoId}/thumbnails`, {}, `${label}: thumbnails`);
         const preferred = (thumbs.data || []).find(t => t.is_preferred) || thumbs.data?.[0];
-        if (!preferred) throw new Error("[thumbnails do vídeo] Nenhuma thumbnail disponível.");
+        if (!preferred) throw new Error(`[${label}: thumbnails] Nenhuma thumbnail disponível.`);
         const cta = cfg.destinoWhatsApp
           ? { type: "WHATSAPP_MESSAGE" }
           : { type: "LEARN_MORE", value: { link } };
@@ -161,12 +166,12 @@ export default async function handler(req, res) {
       const creative = await metaPost(`${ACT}/adcreatives`, {
         name: `${nome} - Criativo ${i + 1}`,
         object_story_spec: JSON.stringify(creativeSpec),
-      }, "criar criativo");
+      }, `${label}: criar criativo`);
 
       const anuncio = await metaPost(`${ACT}/ads`, {
         name: `${nome} - Anúncio ${i + 1}`, adset_id: adset.id,
         creative: JSON.stringify({ creative_id: creative.id }), status: "PAUSED",
-      }, "criar anúncio");
+      }, `${label}: criar anúncio`);
 
       anunciosCriados.push(anuncio.id);
     }
@@ -178,7 +183,7 @@ export default async function handler(req, res) {
       ad_ids: anunciosCriados, ad_id: anunciosCriados[0],
     });
   } catch (e) {
-    return res.status(400).json({ sucesso: false, erro: e.message });
+    return res.status(400).json({ sucesso: false, erro: e.message, detalhes: e.metaError || null });
   } finally {
     // apaga o Blob em qualquer desfecho terminal (sucesso ou erro)
     if (videoUrl) {
