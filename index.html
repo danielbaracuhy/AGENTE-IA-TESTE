@@ -1072,7 +1072,7 @@ async function buscarEAnalisar(primeiraVez) {
       alert('Nenhuma campanha com entrega no período selecionado.'); return;
     }
     const data = processFromAPI(apiData);
-    runLoader(() => { render(data, 'Tempo Real'); if (primeiraVez) screen('screen-dashboard'); });
+    runLoader(() => { render(data, 'Tempo Real'); screen('screen-dashboard'); });
   } catch (e) { alert('⚠️ ' + e.message); }
 }
 
