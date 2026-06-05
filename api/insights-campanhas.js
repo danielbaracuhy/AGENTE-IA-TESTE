@@ -26,6 +26,19 @@ function resolveConversions(actions){
     if(fb)return{conversoes:num(fb.value),tipo:fb.action_type}; }
   return{conversoes:0,tipo:null};
 }
+function detectarDestino(actions){
+  return Array.isArray(actions) && actions.some(a=>/messaging_conversation_started/i.test(a.action_type||""))
+    ? "whatsapp" : "site";
+}
+function contarChegada(actions, destino){
+  if(destino==="whatsapp"){
+    return actionValue(actions,"onsite_conversion.messaging_conversation_started_7d")
+        || actionValue(actions,"onsite_conversion.messaging_conversation_started")
+        || actionValue(actions,"messaging_conversation_started_7d")
+        || actionValue(actions,"messaging_conversation_started");
+  }
+  return actionValue(actions,"landing_page_view");
+}
 function fmtData(iso){ if(!iso)return""; const [y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; }
 function getQuery(req){ if(req.query&&Object.keys(req.query).length)return req.query;
   try{ return Object.fromEntries(new URL(req.url,"http://localhost").searchParams); }catch{ return {}; } }
@@ -69,7 +82,8 @@ export default async function handler(req,res){
       const investido=num(row.spend);
       const cliques=num(row.inline_link_clicks);
       const lp_views=actionValue(row.actions,"landing_page_view");
-      const {conversoes,tipo}=resolveConversions(row.actions);
+      const destino=detectarDestino(row.actions);
+      const conversoes=contarChegada(row.actions,destino);
       return { nome:row.campaign_name, status:statusMap[row.campaign_id]||"—",
         investido, alcance:num(row.reach), impressoes:num(row.impressions), frequencia:num(row.frequency),
         cliques, ctr:num(row.inline_link_click_ctr), cpc:num(row.cost_per_inline_link_click), cpm:num(row.cpm),
@@ -77,7 +91,7 @@ export default async function handler(req,res){
         cpp: conversoes>0?investido/conversoes:0,
         taxa_clp: cliques>0?(lp_views/cliques)*100:0,
         taxa_conv: lp_views>0?(conversoes/lp_views)*100:0,
-        tipoConversao:tipo, _campaignId:row.campaign_id };
+        destino, _campaignId:row.campaign_id };
     });
     if(campaignId) campanhas=campanhas.filter(c=>c._campaignId===campaignId);
 
@@ -86,7 +100,12 @@ export default async function handler(req,res){
     else if(rows.length){ inicio=fmtData(rows[0].date_start); fim=fmtData(rows[0].date_stop); }
     const periodo=(inicio&&fim)?`${inicio} a ${fim}`:"Período selecionado";
 
+    const _dests=[...new Set(campanhas.map(c=>c.destino))];
+    const destino=_dests.length===1?_dests[0]:(_dests.length===0?"site":"misto");
+    const rotuloConvSub=destino==="whatsapp"?"conversa no WhatsApp"
+                       :destino==="site"?"visita na página":"conversas + visitas";
+
     return res.status(200).json({ periodo, inicio, fim, atualizadoEm:new Date().toISOString(),
-      campanhas, campanhasDisponiveis });
+      campanhas, campanhasDisponiveis, destino, rotuloConvSub });
   }catch(err){ return res.status(500).json({error:err.message||"Falha inesperada no Analisador."}); }
 }
