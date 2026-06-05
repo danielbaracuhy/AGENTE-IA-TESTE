@@ -299,11 +299,11 @@ tr:hover td{background:var(--surface2)}
   <p class="ld-step-text" id="ld-text">Iniciando...</p>
   <div class="prog-wrap"><div class="prog-bar" id="prog-bar"></div></div>
   <div class="ld-steps">
-    <div class="ld-step-item" data-i="0"><span class="si">📂</span> Lendo arquivo CSV</div>
-    <div class="ld-step-item" data-i="1"><span class="si">🔍</span> Identificando colunas</div>
-    <div class="ld-step-item" data-i="2"><span class="si">🧮</span> Calculando métricas</div>
+    <div class="ld-step-item" data-i="0"><span class="si">🌐</span> Conectando ao Meta Ads</div>
+    <div class="ld-step-item" data-i="1"><span class="si">📡</span> Buscando campanhas e métricas</div>
+    <div class="ld-step-item" data-i="2"><span class="si">🧮</span> Calculando indicadores</div>
     <div class="ld-step-item" data-i="3"><span class="si">🚨</span> Gerando alertas automáticos</div>
-    <div class="ld-step-item" data-i="4"><span class="si">📊</span> Montando dashboard</div>
+    <div class="ld-step-item" data-i="4"><span class="si">📊</span> Montando a análise</div>
   </div>
 </div>
 
@@ -859,7 +859,7 @@ function exportPDF() {
   y = 36;
 
   doc.setTextColor(80,80,80); doc.setFontSize(8);
-  doc.text(`Periodo: ${periodo.inicio||''} a ${periodo.fim||''}  |  Campanhas: ${camps.length}  |  Arquivo: ${S.file?.name||'N/A'}`, 14, y);
+  doc.text(`Periodo: ${periodo.inicio||''} a ${periodo.fim||''}  |  Campanhas: ${camps.length}  |  Fonte: Meta Ads API`, 14, y);
   y += 9;
 
   // KPI table
@@ -960,11 +960,11 @@ function exportPDF() {
 function runLoader(cb) {
   screen('screen-loading');
   const steps = [
-    [20,'Lendo arquivo CSV...'],
-    [40,'Identificando colunas...'],
-    [60,'Calculando métricas...'],
+    [20,'Conectando ao Meta Ads...'],
+    [40,'Buscando campanhas e métricas...'],
+    [60,'Calculando indicadores...'],
     [80,'Gerando alertas automáticos...'],
-    [100,'Montando dashboard...'],
+    [100,'Montando a análise...'],
   ];
   const items = document.querySelectorAll('.ld-step-item');
   items.forEach(el => { el.classList.remove('active','done'); });
