@@ -686,7 +686,7 @@ function render(data, fname) {
     { lbl:'Custo por conversão', val:t.cpp_m>0?brl(t.cpp_m):'—', sub:t.cpp_m<=0?'sem dado de conversão':t.cpp_m>150?'⚠ Alto':t.cpp_m>100?'~ Ok':'✓ Ótimo', ico:'🎯', kc:t.cpp_m>150?'#ef4444':t.cpp_m>100?'#f59e0b':'#22c55e', bdg:null },
     { lbl:'CTR Médio',          val:p(t.ctr_m,'%'),        sub:'benchmark: >1% bom, >3% ótimo',             ico:'📈', kc:t.ctr_m>=3?'#22c55e':t.ctr_m>=1?'#f59e0b':'#ef4444', bdg:null },
     { lbl:'Conv. Landing Page', val:p(t.conv_m,'%'),       sub:`${n(t.tlp)} views da LP`,                   ico:'🔄', kc:t.conv_m>=5?'#22c55e':t.conv_m>=2?'#f59e0b':'#ef4444', bdg:null },
-  ].map(k => `
+  ].filter(k => !(k.lbl === 'Conv. Landing Page' && data.rotuloConvSub === 'visita na página')).map(k => `
     <div class="kpi" style="--kc:${k.kc}">
       <span class="kpi-icon">${k.ico}</span>
       ${k.bdg ? `<span class="kpi-badge ${k.bdg.cls}">${k.bdg.txt}</span>` : ''}
