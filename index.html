@@ -296,6 +296,8 @@ tr:hover td{background:var(--surface2)}
 .auth-msg{font-size:12px;padding:8px 12px;border-radius:8px;text-align:center;display:none}
 .auth-msg.error{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2);display:block}
 .auth-msg.success{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2);display:block}
+#user-info{font-size:11px;color:var(--muted);display:none;align-items:center;gap:5px;white-space:nowrap}
+#user-info strong{color:var(--text)}
 </style>
 </head>
 <body>
@@ -360,6 +362,7 @@ tr:hover td{background:var(--surface2)}
         <button class="btn btn-primary" onclick="abrirModalCampanha()">➕ Criar Campanha</button>
         <button class="btn btn-primary" id="btn-pdf">⬇ Exportar PDF</button>
         <button class="btn btn-ghost" id="btn-sair" onclick="authSignOut()" style="display:none">⎋ Sair</button>
+        <span id="user-info"></span>
       </div>
     </div>
   </header>
@@ -1639,13 +1642,33 @@ window.authSubmit = authSubmit;
 
 window.authSignOut = async function() { await supabase.auth.signOut(); };
 
-function showApp() {
+window.clienteAtivo = null;
+
+async function fetchCliente(user) {
+  window.clienteAtivo = null;
+  const el = document.getElementById('user-info');
+  el.style.display = 'none'; el.textContent = '';
+  if (!user) return;
+  const { data: cliente } = await supabase
+    .from('clientes')
+    .select('id, status, role, nome_empresa')
+    .eq('auth_user_id', user.id)
+    .single();
+  window.clienteAtivo = cliente || null;
+  el.innerHTML = `<strong>${user.email}</strong>${cliente?.status ? ` · ${cliente.status}` : ''}`;
+  el.style.display = 'flex';
+}
+
+async function showApp(user) {
   document.getElementById('auth-overlay').style.display = 'none';
   document.getElementById('btn-sair').style.display = '';
+  await fetchCliente(user);
 }
 function hideApp() {
   document.getElementById('auth-overlay').style.display = 'flex';
   document.getElementById('btn-sair').style.display = 'none';
+  document.getElementById('user-info').style.display = 'none';
+  window.clienteAtivo = null;
 }
 
 document.getElementById('auth-btn').addEventListener('click', authSubmit);
@@ -1654,9 +1677,9 @@ document.getElementById('auth-btn').addEventListener('click', authSubmit);
 );
 
 const { data: { session } } = await supabase.auth.getSession();
-if (session) showApp();
+if (session) await showApp(session.user);
 
-supabase.auth.onAuthStateChange((_event, session) => { if (session) showApp(); else hideApp(); });
+supabase.auth.onAuthStateChange((_event, session) => { if (session) showApp(session.user); else hideApp(); });
 </script>
 </body>
 </html>
