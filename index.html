@@ -259,6 +259,43 @@ tr:hover td{background:var(--surface2)}
 #mc-status.error{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.3)}
 .mc-foot{padding:13px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:9px;position:sticky;bottom:0;background:var(--surface)}
 @media(max-width:520px){.mc-row2{grid-template-columns:1fr}}
+
+/* ── AUTH OVERLAY ────────────────────────────────────── */
+#auth-overlay{
+  position:fixed;inset:0;z-index:10000;display:flex;
+  align-items:center;justify-content:center;padding:20px;
+  background:radial-gradient(ellipse at 50% 0%,rgba(79,126,248,.14) 0%,transparent 65%),var(--bg)
+}
+.auth-box{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:18px;box-shadow:var(--shadow);
+  width:100%;max-width:380px;padding:36px 32px;
+  display:flex;flex-direction:column;gap:18px
+}
+.auth-logo{font-size:44px;text-align:center}
+.auth-title{font-size:22px;font-weight:800;text-align:center;color:#fff}
+.auth-sub-txt{font-size:13px;color:var(--muted);text-align:center}
+.auth-field{display:flex;flex-direction:column;gap:5px}
+.auth-field label{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.auth-field input{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:9px;color:var(--text);font-size:14px;
+  padding:10px 13px;outline:none;width:100%;transition:border-color .15s
+}
+.auth-field input:focus{border-color:var(--accent)}
+.auth-btn{
+  width:100%;border:none;border-radius:12px;padding:12px;
+  font-size:14px;font-weight:700;color:#fff;cursor:pointer;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  transition:opacity .2s,transform .2s
+}
+.auth-btn:hover:not(:disabled){opacity:.9;transform:translateY(-1px)}
+.auth-btn:disabled{opacity:.4;cursor:not-allowed}
+.auth-toggle{font-size:12px;color:var(--muted);text-align:center}
+.auth-toggle a{color:var(--accent);cursor:pointer;text-decoration:underline}
+.auth-msg{font-size:12px;padding:8px 12px;border-radius:8px;text-align:center;display:none}
+.auth-msg.error{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2);display:block}
+.auth-msg.success{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2);display:block}
 </style>
 </head>
 <body>
@@ -322,6 +359,7 @@ tr:hover td{background:var(--surface2)}
         <button class="btn btn-ghost" id="btn-new">↩ Nova Análise</button>
         <button class="btn btn-primary" onclick="abrirModalCampanha()">➕ Criar Campanha</button>
         <button class="btn btn-primary" id="btn-pdf">⬇ Exportar PDF</button>
+        <button class="btn btn-ghost" id="btn-sair" onclick="authSignOut()" style="display:none">⎋ Sair</button>
       </div>
     </div>
   </header>
@@ -1529,5 +1567,96 @@ function escalarCampanhaValor(){
     <button onclick="fecharEscalar()" style="margin-top:14px;background:transparent;border:0;color:#8b9bc4;cursor:pointer;font-size:13px;">Fechar</button>
   </div>
 </div>
+<!-- ═══ AUTH OVERLAY ════════════════════════════════════ -->
+<div id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-logo">📊</div>
+    <div>
+      <p class="auth-title">Meta Ads Analytics</p>
+      <p class="auth-sub-txt" id="auth-sub">Faça login para continuar</p>
+    </div>
+    <div class="auth-field">
+      <label for="auth-email">E-mail</label>
+      <input type="email" id="auth-email" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="auth-field">
+      <label for="auth-password">Senha</label>
+      <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div id="auth-msg" class="auth-msg"></div>
+    <button class="auth-btn" id="auth-btn">Entrar</button>
+    <p class="auth-toggle">
+      <span id="auth-toggle-text">Não tem conta?</span>
+      <a onclick="authToggleMode()"> Criar conta</a>
+    </p>
+  </div>
+</div>
+
+<script type="module">
+import { createClient }                           from 'https://esm.sh/@supabase/supabase-js@2';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+window.supabase = supabase;
+
+let authMode = 'login';
+
+function setMsg(text, type) {
+  const el = document.getElementById('auth-msg');
+  el.textContent = text;
+  el.className = 'auth-msg' + (type ? ' ' + type : '');
+}
+
+window.authToggleMode = function() {
+  authMode = authMode === 'login' ? 'signup' : 'login';
+  const s = authMode === 'signup';
+  document.getElementById('auth-btn').textContent         = s ? 'Criar conta' : 'Entrar';
+  document.getElementById('auth-sub').textContent         = s ? 'Crie sua conta' : 'Faça login para continuar';
+  document.getElementById('auth-toggle-text').textContent = s ? 'Já tem conta?' : 'Não tem conta?';
+  document.querySelector('.auth-toggle a').textContent    = s ? ' Entrar' : ' Criar conta';
+  setMsg('', '');
+};
+
+async function authSubmit() {
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const btn      = document.getElementById('auth-btn');
+  if (!email || !password) { setMsg('Preencha e-mail e senha.', 'error'); return; }
+  btn.disabled = true; btn.textContent = 'Aguarde...'; setMsg('', '');
+  try {
+    let error;
+    if (authMode === 'login') {
+      ({ error } = await supabase.auth.signInWithPassword({ email, password }));
+    } else {
+      ({ error } = await supabase.auth.signUp({ email, password }));
+      if (!error) setMsg('Conta criada! Verifique seu e-mail para confirmar.', 'success');
+    }
+    if (error) setMsg(error.message, 'error');
+  } catch { setMsg('Erro inesperado. Tente novamente.', 'error'); }
+  finally { btn.disabled = false; btn.textContent = authMode === 'login' ? 'Entrar' : 'Criar conta'; }
+}
+window.authSubmit = authSubmit;
+
+window.authSignOut = async function() { await supabase.auth.signOut(); };
+
+function showApp() {
+  document.getElementById('auth-overlay').style.display = 'none';
+  document.getElementById('btn-sair').style.display = '';
+}
+function hideApp() {
+  document.getElementById('auth-overlay').style.display = 'flex';
+  document.getElementById('btn-sair').style.display = 'none';
+}
+
+document.getElementById('auth-btn').addEventListener('click', authSubmit);
+['auth-email', 'auth-password'].forEach(id =>
+  document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') authSubmit(); })
+);
+
+const { data: { session } } = await supabase.auth.getSession();
+if (session) showApp();
+
+supabase.auth.onAuthStateChange((_event, session) => { if (session) showApp(); else hideApp(); });
+</script>
 </body>
 </html>
