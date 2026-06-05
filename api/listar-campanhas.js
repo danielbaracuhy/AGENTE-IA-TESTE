@@ -1,3 +1,5 @@
+import { getMetaConfig } from '../lib/meta-config.js';
+
 const API_VERSION = "v25.0";
 const GRAPH = `https://graph.facebook.com/${API_VERSION}`;
 
@@ -6,7 +8,7 @@ export const config = { maxDuration: 30 };
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ erro: 'Use GET' });
   try {
-    const ACT = process.env.META_AD_ACCOUNT_ID;
+    const { adAccountId: ACT } = await getMetaConfig(req);
     const qs = new URLSearchParams({
       fields: 'name,status,effective_status,ads.limit(1){effective_status}',
       limit: '100',

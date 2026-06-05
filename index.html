@@ -1465,7 +1465,8 @@ async function carregarCampanhas(){
   lista.style.color='var(--muted)';lista.innerHTML='Carregando...';
   btn.disabled=true;
   try{
-    var r=await fetch('/api/listar-campanhas');
+    var _ses=(await supabase.auth.getSession()).data.session;
+    var r=await fetch('/api/listar-campanhas',{headers:_ses?{'Authorization':'Bearer '+_ses.access_token}:{}});
     var d=await r.json();
     if(!r.ok||d.erro){lista.style.color='#f87171';lista.innerHTML='❌ '+escCamp(d.erro||'Erro desconhecido.');return;}
     renderCampanhas(d.campanhas);
