@@ -1479,12 +1479,26 @@ async function carregarCampanhas(){
   finally{btn.disabled=false;}
 }
 
-function statusCamp(ef){
-  if(ef==='ACTIVE')return{label:'Aprovado',cor:'#22c55e'};
-  if(['PENDING_REVIEW','IN_PROCESS','PREAPPROVED'].indexOf(ef)>-1)return{label:'Em análise',cor:'#f59e0b'};
-  if(['DISAPPROVED','WITH_ISSUES','PENDING_BILLING_INFO'].indexOf(ef)>-1)return{label:'Reprovado',cor:'#ef4444'};
-  if(['PAUSED','CAMPAIGN_PAUSED','ADSET_PAUSED'].indexOf(ef)>-1)return{label:'Pausado',cor:'#94a3b8'};
-  return{label:'Em análise',cor:'#f59e0b'};
+function estadoDaCampanha(c){
+  var ef=c.effective_status;
+  // 1. Reprovada — ganha até de pausada (bloqueio que o cliente precisa resolver primeiro)
+  if(['DISAPPROVED','WITH_ISSUES'].indexOf(ef)>-1)
+    return{estado:'reprovada',rotulo:'Reprovada',cor:'#ef4444',
+      microcopy:'O Facebook reprovou este anúncio. Veja o motivo e corrija.'};
+  // 2. Pausada — cliente desligou
+  if(c.status!=='ACTIVE')
+    return{estado:'pausada',rotulo:'Pausada',cor:'#94a3b8',
+      microcopy:'Pronta para começar. Ative quando quiser rodar.'};
+  // 3. Em análise — ligada, aguardando revisão do Facebook
+  if(['PENDING_REVIEW','IN_PROCESS','PREAPPROVED','PENDING_BILLING_INFO'].indexOf(ef)>-1)
+    return{estado:'em_analise',rotulo:'Em análise',cor:'#f59e0b',
+      microcopy:'Você ativou. O Facebook está revisando — começa a rodar sozinha quando aprovar.'};
+  // 4. No ar
+  if(ef==='ACTIVE')
+    return{estado:'no_ar',rotulo:'No ar',cor:'#22c55e',microcopy:'Rodando'};
+  // 5. Fallback seguro
+  return{estado:'pausada',rotulo:'Pausada',cor:'#94a3b8',
+    microcopy:'Pronta para começar. Ative quando quiser rodar.'};
 }
 
 function escCamp(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -1493,17 +1507,45 @@ function renderCampanhas(camps){
   var lista=document.getElementById('camps-lista');
   if(!camps||!camps.length){lista.style.color='var(--muted)';lista.innerHTML='Nenhuma campanha encontrada.';return;}
   lista.style.color='';
+  var bs='padding:4px 12px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;';
   lista.innerHTML=camps.map(function(c){
-    var st=statusCamp(c.effective_status);
-    var ativar=c.status==='PAUSED';
-    return '<div data-id="'+c.id+'" data-nome="'+escCamp(c.nome)+'" style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">'
-      +'<span style="flex:1;min-width:120px;color:var(--text)">'+escCamp(c.nome)+'</span>'
-      +'<span style="font-size:11px;font-weight:600;white-space:nowrap;padding:2px 8px;border-radius:20px;background:'+st.cor+'22;color:'+st.cor+'">'+st.label+'</span>'
-      +'<button data-acao="'+(ativar?'ativar':'pausar')+'" onclick="acaoCampanha(this)" style="padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:'+(ativar?'#4f7ef8':'#475569')+';color:#fff">'+(ativar?'Ativar':'Pausar')+'</button>'
-      +'<button data-acao="excluir" onclick="acaoCampanha(this)" style="padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:#374151;color:#f87171">Excluir</button>'
-      +'<button onclick="abrirEscalar(\''+c.id+'\',\''+escCamp(c.nome)+'\')" style="padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:#065f46;color:#6ee7b7">Escalar</button>'
+    var d=estadoDaCampanha(c);
+    var id=c.id, nome=escCamp(c.nome), motivo=escCamp(c.motivo_reprovacao||'');
+    var btns='';
+    if(d.estado==='reprovada'){
+      btns='<button onclick="verMotivoReprovacao(this)" style="'+bs+'background:#7f1d1d;color:#fca5a5">Ver motivo</button>'
+          +'<button data-acao="excluir" onclick="acaoCampanha(this)" style="'+bs+'background:#374151;color:#f87171">Excluir</button>';
+    }else if(d.estado==='pausada'){
+      btns='<button data-acao="ativar" onclick="acaoCampanha(this)" style="'+bs+'background:#4f7ef8;color:#fff">Ativar</button>'
+          +'<button data-acao="excluir" onclick="acaoCampanha(this)" style="'+bs+'background:#374151;color:#f87171">Excluir</button>';
+    }else if(d.estado==='em_analise'){
+      btns='<button data-acao="pausar" onclick="acaoCampanha(this)" style="'+bs+'background:#475569;color:#fff">Pausar</button>'
+          +'<button disabled style="'+bs+'background:#1a2a1a;color:#4a7a5a;opacity:0.5;cursor:not-allowed">Escalar</button>';
+    }else if(d.estado==='no_ar'){
+      btns='<button onclick="abrirEscalar(\''+id+'\',\''+nome+'\')" style="'+bs+'background:#065f46;color:#6ee7b7">Escalar</button>'
+          +'<button data-acao="pausar" onclick="acaoCampanha(this)" style="'+bs+'background:#475569;color:#fff">Pausar</button>';
+    }
+    return '<div data-id="'+id+'" data-nome="'+nome+'" data-motivo="'+motivo+'" style="display:flex;flex-direction:column;gap:5px;padding:10px 0;border-bottom:1px solid var(--border)">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
+        +'<span style="color:var(--text);font-weight:500">'+nome+'</span>'
+        +'<span style="font-size:11px;font-weight:600;white-space:nowrap;padding:2px 8px;border-radius:20px;background:'+d.cor+'22;color:'+d.cor+'">'+d.rotulo+'</span>'
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--muted)">'+d.microcopy+'</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+btns+'</div>'
       +'</div>';
   }).join('');
+}
+
+function verMotivoReprovacao(btn){
+  var row=btn.closest('[data-id]');
+  var motivo=row.dataset.motivo;
+  if(motivo){
+    alert('Motivo da reprovação:\n\n'+motivo);
+  }else{
+    if(confirm('O motivo detalhado não está disponível aqui.\n\nAbrir o Gerenciador de Anúncios do Facebook?')){
+      window.open('https://business.facebook.com/adsmanager/manage/campaigns','_blank');
+    }
+  }
 }
 
 async function acaoCampanha(btn){
