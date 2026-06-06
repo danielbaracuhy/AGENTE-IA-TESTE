@@ -1513,7 +1513,8 @@ async function acaoCampanha(btn){
   var setBtns=function(on){row.querySelectorAll('button').forEach(function(b){b.disabled=!on;});};
   setBtns(false);
   try{
-    var r=await fetch('/api/campanha-acao',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({campaignId:id,acao:acao})});
+    var _ses=(await supabase.auth.getSession()).data.session;
+    var r=await fetch('/api/campanha-acao',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},_ses?{'Authorization':'Bearer '+_ses.access_token}:{}),body:JSON.stringify({campaignId:id,acao:acao})});
     var d=await r.json();
     if(!r.ok||!d.sucesso){alert('Erro: '+(d.erro||'resposta inesperada'));setBtns(true);return;}
     if(acao==='excluir'){row.remove();return;}
