@@ -1145,7 +1145,8 @@ async function renderCriativos(campanhaId){
   sec.style.display=''; grid.innerHTML='Carregando criativos...';
   try{
     const qs=montarQueryAnalise();
-    const r=await fetch('/api/insights-anuncios?'+qs); const data=await r.json();
+    var _ses=(await supabase.auth.getSession()).data.session;
+    const r=await fetch('/api/insights-anuncios?'+qs,{headers:_ses?{'Authorization':'Bearer '+_ses.access_token}:{}}); const data=await r.json();
     if(!r.ok) throw new Error(data.error||'Erro ao buscar criativos.');
     const rotuloChegada=data.rotuloChegada||'conv.';
     const ans=data.anuncios||[];
