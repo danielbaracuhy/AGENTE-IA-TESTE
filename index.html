@@ -1121,7 +1121,8 @@ function popularCampanhas(lista) {
 async function buscarEAnalisar(primeiraVez) {
   try {
     const qs = primeiraVez ? 'preset=last_14d' : montarQueryAnalise();
-    const r = await fetch('/api/insights-campanhas?' + qs);
+    var _ses=(await supabase.auth.getSession()).data.session;
+    const r = await fetch('/api/insights-campanhas?' + qs,{headers:_ses?{'Authorization':'Bearer '+_ses.access_token}:{}});
     const apiData = await r.json();
     if (!r.ok) throw new Error(apiData.error || 'Erro ao buscar métricas.');
     popularCampanhas(apiData.campanhasDisponiveis);

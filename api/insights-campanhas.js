@@ -1,4 +1,6 @@
 // api/insights-campanhas.js
+import { getMetaConfig } from '../lib/meta-config.js';
+
 export const config = { maxDuration: 30 };
 
 const GRAPH = "v25.0"; // mesma versão de listar-campanhas.js
@@ -33,8 +35,7 @@ function getQuery(req){ if(req.query&&Object.keys(req.query).length)return req.q
 export default async function handler(req,res){
   try{
     const token=process.env.META_ACCESS_TOKEN;
-    const accountId=process.env.META_AD_ACCOUNT_ID;
-    if(!token||!accountId) return res.status(500).json({error:"Faltam META_ACCESS_TOKEN ou META_AD_ACCOUNT_ID."});
+    if(!token) return res.status(500).json({error:"Falta META_ACCESS_TOKEN."});
 
     const q=getQuery(req);
     let dateParam;
@@ -50,6 +51,7 @@ export default async function handler(req,res){
       "inline_link_clicks","inline_link_click_ctr","cost_per_inline_link_click","cpm","actions",
       "date_start","date_stop"].join(",");
 
+    const { adAccountId: accountId } = await getMetaConfig(req);
     const insightsUrl=`https://graph.facebook.com/${GRAPH}/${accountId}/insights`+
       `?level=campaign&${dateParam}&fields=${fields}&limit=500&access_token=${encodeURIComponent(token)}`;
     const statusUrl=`https://graph.facebook.com/${GRAPH}/${accountId}/campaigns`+
