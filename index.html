@@ -1173,7 +1173,8 @@ async function renderCriativos(campanhaId){
 async function excluirAnuncio(adId,nome,campanhaId,ctr,conv){
   if(!confirm(`Excluir o anúncio "${nome}" (CTR ${ctr}%, ${conv} conversões)? Esta ação é permanente.`)) return;
   try{
-    const r=await fetch('/api/anuncio-acao',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ad_id:adId})});
+    var _ses=(await supabase.auth.getSession()).data.session;
+    const r=await fetch('/api/anuncio-acao',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},_ses?{'Authorization':'Bearer '+_ses.access_token}:{}),body:JSON.stringify({ad_id:adId})});
     const data=await r.json();
     if(!r.ok||!data.sucesso) throw new Error(data.error||'Falha ao excluir.');
     renderCriativos(campanhaId);
