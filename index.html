@@ -1516,7 +1516,7 @@ function renderCampanhas(camps){
       btns='<button onclick="verMotivoReprovacao(this)" style="'+bs+'background:#7f1d1d;color:#fca5a5">Ver motivo</button>'
           +'<button data-acao="excluir" onclick="acaoCampanha(this)" style="'+bs+'background:#374151;color:#f87171">Excluir</button>';
     }else if(d.estado==='pausada'){
-      btns='<button data-acao="ativar" onclick="acaoCampanha(this)" style="'+bs+'background:#4f7ef8;color:#fff">Ativar</button>'
+      btns='<button data-acao="ativar" onclick="confirmarAtivar(this)" style="'+bs+'background:#4f7ef8;color:#fff">Ativar</button>'
           +'<button data-acao="excluir" onclick="acaoCampanha(this)" style="'+bs+'background:#374151;color:#f87171">Excluir</button>';
     }else if(d.estado==='em_analise'){
       btns='<button data-acao="pausar" onclick="acaoCampanha(this)" style="'+bs+'background:#475569;color:#fff">Pausar</button>'
@@ -1525,7 +1525,10 @@ function renderCampanhas(camps){
       btns='<button onclick="abrirEscalar(\''+id+'\',\''+nome+'\')" style="'+bs+'background:#065f46;color:#6ee7b7">Escalar</button>'
           +'<button data-acao="pausar" onclick="acaoCampanha(this)" style="'+bs+'background:#475569;color:#fff">Pausar</button>';
     }
-    return '<div data-id="'+id+'" data-nome="'+nome+'" data-motivo="'+motivo+'" style="display:flex;flex-direction:column;gap:5px;padding:10px 0;border-bottom:1px solid var(--border)">'
+    return '<div data-id="'+id+'" data-nome="'+nome+'" data-motivo="'+motivo+'"'
+      +' data-daily="'+(c.daily_budget!=null?c.daily_budget:'')+'"'
+      +' data-lifetime="'+(c.lifetime_budget!=null?c.lifetime_budget:'')+'"'
+      +' style="display:flex;flex-direction:column;gap:5px;padding:10px 0;border-bottom:1px solid var(--border)">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
         +'<span style="color:var(--text);font-weight:500">'+nome+'</span>'
         +'<span style="font-size:11px;font-weight:600;white-space:nowrap;padding:2px 8px;border-radius:20px;background:'+d.cor+'22;color:'+d.cor+'">'+d.rotulo+'</span>'
@@ -1553,7 +1556,6 @@ async function acaoCampanha(btn){
   var id=row.dataset.id;
   var nome=row.dataset.nome;
   var acao=btn.dataset.acao;
-  if(acao==='ativar'&&!confirm('Ativar "'+nome+'"?\nA campanha vai começar a gastar o orçamento.'))return;
   if(acao==='excluir'&&!confirm('Excluir permanentemente "'+nome+'"?\nEssa ação não pode ser desfeita.'))return;
   var setBtns=function(on){row.querySelectorAll('button').forEach(function(b){b.disabled=!on;});};
   setBtns(false);
@@ -1565,6 +1567,35 @@ async function acaoCampanha(btn){
     if(acao==='excluir'){row.remove();return;}
     carregarCampanhas();
   }catch(e){alert('Falha de rede: '+e.message);setBtns(true);}
+}
+
+var _btnAtivarPendente=null;
+function confirmarAtivar(btn){
+  var row=btn.closest('[data-id]');
+  var nome=row.dataset.nome;
+  var daily=row.dataset.daily!==''?parseFloat(row.dataset.daily):null;
+  var lifetime=row.dataset.lifetime!==''?parseFloat(row.dataset.lifetime):null;
+  var fmt=function(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});};
+  var msg;
+  if(daily!==null&&daily>0){
+    msg='A campanha "'+nome+'" vai começar a rodar e gastar até '+fmt(daily)+'/dia. Confirmar?';
+  }else if(lifetime!==null&&lifetime>0){
+    msg='A campanha "'+nome+'" vai começar a rodar com orçamento total de '+fmt(lifetime)+'. Confirmar?';
+  }else{
+    msg='A campanha "'+nome+'" vai começar a rodar e gastar o orçamento configurado. Confirmar?';
+  }
+  document.getElementById('modal-ativar-msg').textContent=msg;
+  document.getElementById('modal-ativar').style.display='flex';
+  _btnAtivarPendente=btn;
+}
+function fecharModalAtivar(){
+  document.getElementById('modal-ativar').style.display='none';
+  _btnAtivarPendente=null;
+}
+function executarAtivar(){
+  var btn=_btnAtivarPendente;
+  fecharModalAtivar();
+  if(btn)acaoCampanha(btn);
 }
 
 let escCampanhaId = null;
@@ -1620,6 +1651,16 @@ function escalarCampanhaValor(){
     <button onclick="fecharEscalar()" style="margin-top:14px;background:transparent;border:0;color:#8b9bc4;cursor:pointer;font-size:13px;">Fechar</button>
   </div>
 </div>
+<div id="modal-ativar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#141b2d;border:1px solid #20293f;border-radius:14px;padding:24px;max-width:420px;width:90%;color:#e8ecf4;">
+    <p id="modal-ativar-msg" style="font-size:14px;line-height:1.6;margin:0 0 20px;"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="fecharModalAtivar()" style="padding:9px 18px;border:1px solid #20293f;border-radius:8px;background:transparent;color:#8b9bc4;cursor:pointer;font-size:13px;font-weight:600;">Cancelar</button>
+      <button onclick="executarAtivar()" style="padding:9px 18px;border:none;border-radius:8px;background:#4f7ef8;color:#fff;font-weight:600;cursor:pointer;font-size:13px;">Ativar agora</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ AUTH OVERLAY ════════════════════════════════════ -->
 <div id="auth-overlay">
   <div class="auth-box">

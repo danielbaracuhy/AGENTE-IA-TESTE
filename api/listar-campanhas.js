@@ -37,7 +37,7 @@ export default async function handler(req, res) {
   try {
     const { adAccountId: ACT } = await getMetaConfig(req);
     const qs = new URLSearchParams({
-      fields: 'name,status,effective_status,ads.limit(10){effective_status,ad_review_feedback}',
+      fields: 'name,status,effective_status,daily_budget,lifetime_budget,adsets.limit(20){daily_budget,lifetime_budget},ads.limit(10){effective_status,ad_review_feedback}',
       limit: '100',
       access_token: process.env.META_ACCESS_TOKEN,
     });
@@ -52,12 +52,30 @@ export default async function handler(req, res) {
       .filter(c => !ignorar.has(c.effective_status))
       .map(c => {
         const { adEffective, motivo } = agregateAds(c.ads?.data);
+
+        // CBO: budget lives on the campaign
+        let daily_budget = c.daily_budget ? parseFloat(c.daily_budget) / 100 : null;
+        let lifetime_budget = c.lifetime_budget ? parseFloat(c.lifetime_budget) / 100 : null;
+
+        // ABO fallback: sum adset budgets when campaign has none
+        if (daily_budget === null && lifetime_budget === null && c.adsets?.data?.length) {
+          let sumDaily = 0, sumLifetime = 0;
+          c.adsets.data.forEach(s => {
+            if (s.daily_budget) sumDaily += parseFloat(s.daily_budget);
+            if (s.lifetime_budget) sumLifetime += parseFloat(s.lifetime_budget);
+          });
+          if (sumDaily > 0) daily_budget = sumDaily / 100;
+          if (sumLifetime > 0) lifetime_budget = sumLifetime / 100;
+        }
+
         return {
           id: c.id,
           nome: c.name,
           status: c.status,
           effective_status: adEffective ?? c.effective_status,
           motivo_reprovacao: motivo,
+          daily_budget,
+          lifetime_budget,
         };
       });
     return res.status(200).json({ campanhas });
