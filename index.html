@@ -1525,16 +1525,24 @@ function renderCampanhas(camps){
       btns='<button onclick="abrirEscalar(\''+id+'\',\''+nome+'\')" style="'+bs+'background:#065f46;color:#6ee7b7">Escalar</button>'
           +'<button data-acao="pausar" onclick="acaoCampanha(this)" style="'+bs+'background:#475569;color:#fff">Pausar</button>';
     }
+    var thumbs=Array.isArray(c.thumbnails)?c.thumbnails:[];
+    var sz=thumbs.length>=2?'48px':'56px';
+    var thumbHtml=thumbs.length===0
+      ?'<div style="width:56px;height:56px;border-radius:8px;background:var(--surface2);flex-shrink:0;"></div>'
+      :thumbs.slice(0,2).map(function(u){return '<img src="'+escCamp(u)+'" style="width:'+sz+';height:'+sz+';border-radius:8px;object-fit:cover;flex-shrink:0;" loading="lazy">';}).join('');
     return '<div data-id="'+id+'" data-nome="'+nome+'" data-motivo="'+motivo+'"'
       +' data-daily="'+(c.daily_budget!=null?c.daily_budget:'')+'"'
       +' data-lifetime="'+(c.lifetime_budget!=null?c.lifetime_budget:'')+'"'
-      +' style="display:flex;flex-direction:column;gap:5px;padding:10px 0;border-bottom:1px solid var(--border)">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
-        +'<span style="color:var(--text);font-weight:500">'+nome+'</span>'
-        +'<span style="font-size:11px;font-weight:600;white-space:nowrap;padding:2px 8px;border-radius:20px;background:'+d.cor+'22;color:'+d.cor+'">'+d.rotulo+'</span>'
+      +' style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)">'
+      +'<div style="display:flex;gap:4px;flex-shrink:0;align-items:center;">'+thumbHtml+'</div>'
+      +'<div style="flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
+          +'<span style="color:var(--text);font-weight:500">'+nome+'</span>'
+          +'<span style="font-size:11px;font-weight:600;white-space:nowrap;padding:2px 8px;border-radius:20px;background:'+d.cor+'22;color:'+d.cor+'">'+d.rotulo+'</span>'
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--muted)">'+d.microcopy+'</div>'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+btns+'</div>'
       +'</div>'
-      +'<div style="font-size:11px;color:var(--muted)">'+d.microcopy+'</div>'
-      +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+btns+'</div>'
       +'</div>';
   }).join('');
 }

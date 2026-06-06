@@ -37,7 +37,7 @@ export default async function handler(req, res) {
   try {
     const { adAccountId: ACT } = await getMetaConfig(req);
     const qs = new URLSearchParams({
-      fields: 'name,status,effective_status,daily_budget,lifetime_budget,adsets.limit(20){daily_budget,lifetime_budget},ads.limit(10){effective_status,ad_review_feedback}',
+      fields: 'name,status,effective_status,daily_budget,lifetime_budget,adsets.limit(20){daily_budget,lifetime_budget},ads.limit(10){effective_status,ad_review_feedback,creative{thumbnail_url,image_url}}',
       limit: '100',
       access_token: process.env.META_ACCESS_TOKEN,
     });
@@ -68,6 +68,17 @@ export default async function handler(req, res) {
           if (sumLifetime > 0) lifetime_budget = sumLifetime / 100;
         }
 
+        let thumbnails = [];
+        try {
+          if (c.ads?.data?.length) {
+            for (const ad of c.ads.data) {
+              const url = ad.creative?.thumbnail_url || ad.creative?.image_url || null;
+              if (url) thumbnails.push(url);
+              if (thumbnails.length >= 2) break;
+            }
+          }
+        } catch (_) {}
+
         return {
           id: c.id,
           nome: c.name,
@@ -76,6 +87,7 @@ export default async function handler(req, res) {
           motivo_reprovacao: motivo,
           daily_budget,
           lifetime_budget,
+          thumbnails,
         };
       });
     return res.status(200).json({ campanhas });
