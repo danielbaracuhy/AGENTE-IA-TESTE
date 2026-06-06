@@ -1554,28 +1554,28 @@ function renderCampanhas(camps){
 
 var _autoRefreshTimer=null;
 var _ultimasCampanhas=[];
+var _autoRefreshBound=false;
 function _temEmAnalise(){
   return _ultimasCampanhas.some(function(c){return estadoDaCampanha(c).estado==='em_analise';});
 }
 function _agendarAutoRefresh(){
   var hint=document.getElementById('camps-refresh-hint');
-  clearInterval(_autoRefreshTimer);
+  clearTimeout(_autoRefreshTimer);
   _autoRefreshTimer=null;
-  if(_temEmAnalise()){
-    _autoRefreshTimer=setInterval(carregarCampanhas,45000);
-    if(hint)hint.style.display='';
-  }else{
-    if(hint)hint.style.display='none';
+  if(!_temEmAnalise()){if(hint)hint.style.display='none';return;}
+  if(hint)hint.style.display='';
+  if(!_autoRefreshBound){
+    _autoRefreshBound=true;
+    document.addEventListener('visibilitychange',function(){
+      if(document.hidden){clearTimeout(_autoRefreshTimer);_autoRefreshTimer=null;}
+      else if(_temEmAnalise()){carregarCampanhas();}
+    });
   }
+  if(document.hidden)return;
+  var _modaisAbertos=['modal-ativar','modal-escalar','modalCampanha'].some(function(id){var el=document.getElementById(id);return el&&el.style.display!=='none';});
+  if(_modaisAbertos){_autoRefreshTimer=setTimeout(_agendarAutoRefresh,45000);return;}
+  _autoRefreshTimer=setTimeout(carregarCampanhas,45000);
 }
-document.addEventListener('visibilitychange',function(){
-  if(document.hidden){
-    clearInterval(_autoRefreshTimer);
-    _autoRefreshTimer=null;
-  }else if(_temEmAnalise()){
-    carregarCampanhas();
-  }
-});
 
 function verMotivoReprovacao(btn){
   var row=btn.closest('[data-id]');
