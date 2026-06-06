@@ -1,5 +1,6 @@
 import { del } from '@vercel/blob';
 import { getMetaConfig } from '../lib/meta-config.js';
+import { verificarStatus } from '../lib/verificar-status.js';
 
 const API_VERSION = "v25.0";
 const GRAPH = `https://graph.facebook.com/${API_VERSION}`;
@@ -50,6 +51,9 @@ async function metaGet(path, params, etapa) {
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ erro: "Use POST" });
+  const st = await verificarStatus(req);
+  if (!st.permitido) return res.status(403).json({ error: st.motivo, status: st.status });
+  console.log('[verificar-status] fonte:', st.fonte, 'status:', st.status);
   const {
     nome, destino, link, imagemBase64, videoId, videoUrl, texto, orcamentoDiario,
     alcance, estados, cidades, idadeMin, idadeMax, generos, plataformas,

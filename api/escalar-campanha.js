@@ -1,4 +1,5 @@
 // api/escalar-campanha.js
+import { verificarStatus } from '../lib/verificar-status.js';
 export const config = { maxDuration: 30 };
 const GRAPH = "v25.0"; // igualar a listar-campanhas.js
 
@@ -17,6 +18,9 @@ async function fbPost(id, fields, token){
 export default async function handler(req, res){
   try{
     if (req.method !== "POST") return res.status(405).json({ error:"Método não permitido." });
+    const st = await verificarStatus(req);
+    if (!st.permitido) return res.status(403).json({ error: st.motivo, status: st.status });
+    console.log('[verificar-status] fonte:', st.fonte, 'status:', st.status);
     const token = process.env.META_ACCESS_TOKEN;
     if (!token) return res.status(500).json({ error:"Falta META_ACCESS_TOKEN." });
 

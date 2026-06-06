@@ -1,3 +1,4 @@
+import { verificarStatus } from '../lib/verificar-status.js';
 const API_VERSION = "v25.0";
 const GRAPH = `https://graph.facebook.com/${API_VERSION}`;
 
@@ -53,6 +54,9 @@ async function getChildIds(campaignId, edge, token) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ erro: 'Use POST' });
+  const st = await verificarStatus(req);
+  if (!st.permitido) return res.status(403).json({ error: st.motivo, status: st.status });
+  console.log('[verificar-status] fonte:', st.fonte, 'status:', st.status);
   const { campaignId, acao } = req.body || {};
   if (!campaignId || !acao) return res.status(400).json({ erro: 'campaignId e acao são obrigatórios.' });
 
