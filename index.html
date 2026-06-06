@@ -325,6 +325,7 @@ tr:hover td{background:var(--surface2)}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <span style="font-weight:700;font-size:15px">📋 Minhas Campanhas</span>
         <button id="btn-carregar-camps" onclick="carregarCampanhas()" style="padding:6px 14px;border:none;border-radius:8px;background:var(--accent2);color:#fff;font-size:13px;font-weight:600;cursor:pointer">Carregar</button>
+        <span id="camps-refresh-hint" style="display:none;font-size:10px;color:var(--muted);margin-left:4px;">↻ ao vivo</span>
       </div>
       <div id="camps-lista" style="font-size:13px;color:var(--muted)">Clique em "Carregar" para ver suas campanhas.</div>
     </div>
@@ -355,6 +356,7 @@ tr:hover td{background:var(--surface2)}
         <div>
           <p class="brand-title">Meta Ads Analytics</p>
           <p class="brand-sub" id="ds-filename">—</p>
+          <p id="ds-contexto" style="font-size:9px;color:var(--muted);margin-top:1px;display:none;"></p>
         </div>
       </div>
       <div class="dash-actions">
@@ -382,8 +384,8 @@ tr:hover td{background:var(--surface2)}
       </select>
       <input type="date" id="rt-since" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:12px;padding:7px 10px;outline:none;">
       <input type="date" id="rt-until" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:12px;padding:7px 10px;outline:none;">
-      <select id="rt-campanha" style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:12px;padding:7px 10px;outline:none;"><option value="">Todas as campanhas</option></select>
-      <button class="btn btn-primary" onclick="atualizarAnalise()">Atualizar</button>
+      <select id="rt-campanha" onchange="atualizarContextoAnalisador()" style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:12px;padding:7px 10px;outline:none;"><option value="">Todas as campanhas</option></select>
+      <button class="btn btn-primary" onclick="atualizarAnalise();atualizarContextoAnalisador()">Atualizar</button>
     </div>
 
     <div class="section">
@@ -1504,8 +1506,9 @@ function estadoDaCampanha(c){
 function escCamp(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 function renderCampanhas(camps){
+  _ultimasCampanhas=camps||[];
   var lista=document.getElementById('camps-lista');
-  if(!camps||!camps.length){lista.style.color='var(--muted)';lista.innerHTML='Nenhuma campanha encontrada.';return;}
+  if(!camps||!camps.length){lista.style.color='var(--muted)';lista.innerHTML='Nenhuma campanha encontrada.';_agendarAutoRefresh();return;}
   lista.style.color='';
   var bs='padding:4px 12px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;';
   lista.innerHTML=camps.map(function(c){
@@ -1525,6 +1528,7 @@ function renderCampanhas(camps){
       btns='<button onclick="abrirEscalar(\''+id+'\',\''+nome+'\')" style="'+bs+'background:#065f46;color:#6ee7b7">Escalar</button>'
           +'<button data-acao="pausar" onclick="acaoCampanha(this)" style="'+bs+'background:#475569;color:#fff">Pausar</button>';
     }
+    btns+='<button onclick="analisarCampanha(\''+id+'\')" style="'+bs+'background:transparent;border:1px solid var(--border);color:var(--muted);">📊 Analisar</button>';
     var thumbs=Array.isArray(c.thumbnails)?c.thumbnails:[];
     var sz=thumbs.length>=2?'48px':'56px';
     var thumbHtml=thumbs.length===0
@@ -1545,7 +1549,33 @@ function renderCampanhas(camps){
       +'</div>'
       +'</div>';
   }).join('');
+  _agendarAutoRefresh();
 }
+
+var _autoRefreshTimer=null;
+var _ultimasCampanhas=[];
+function _temEmAnalise(){
+  return _ultimasCampanhas.some(function(c){return estadoDaCampanha(c).estado==='em_analise';});
+}
+function _agendarAutoRefresh(){
+  var hint=document.getElementById('camps-refresh-hint');
+  clearInterval(_autoRefreshTimer);
+  _autoRefreshTimer=null;
+  if(_temEmAnalise()){
+    _autoRefreshTimer=setInterval(carregarCampanhas,45000);
+    if(hint)hint.style.display='';
+  }else{
+    if(hint)hint.style.display='none';
+  }
+}
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden){
+    clearInterval(_autoRefreshTimer);
+    _autoRefreshTimer=null;
+  }else if(_temEmAnalise()){
+    carregarCampanhas();
+  }
+});
 
 function verMotivoReprovacao(btn){
   var row=btn.closest('[data-id]');
@@ -1575,6 +1605,32 @@ async function acaoCampanha(btn){
     if(acao==='excluir'){row.remove();return;}
     carregarCampanhas();
   }catch(e){alert('Falha de rede: '+e.message);setBtns(true);}
+}
+
+async function analisarCampanha(campaignId){
+  var sel=document.getElementById('rt-campanha');
+  // Pré-popula o select com a lista já carregada em Minhas Campanhas para que
+  // montarQueryAnalise() possa incluir campaign_id antes do fetch
+  if(_ultimasCampanhas.length){
+    popularCampanhas(_ultimasCampanhas.map(function(c){return{id:c.id,nome:c.nome};}));
+  }else if(sel&&!sel.querySelector('option[value="'+campaignId+'"]')){
+    var opt=document.createElement('option');
+    opt.value=campaignId; opt.textContent=campaignId;
+    sel.appendChild(opt);
+  }
+  if(sel) sel.value=campaignId;
+  atualizarContextoAnalisador();
+  // buscarEAnalisar(false) → montarQueryAnalise inclui campaign_id
+  // → popularCampanhas(full list) preserva sel.value → render() chama renderCriativos automaticamente
+  buscarEAnalisar(false);
+}
+function atualizarContextoAnalisador(){
+  var el=document.getElementById('ds-contexto');
+  if(!el) return;
+  var sel=document.getElementById('rt-campanha');
+  var nome=sel&&sel.value&&sel.selectedOptions[0]?sel.selectedOptions[0].text:'';
+  el.textContent='Analisando: '+(nome||'todas as campanhas');
+  el.style.display='';
 }
 
 var _btnAtivarPendente=null;
