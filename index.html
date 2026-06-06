@@ -1535,8 +1535,9 @@ async function aplicarEscala(payload){
   const status = document.getElementById('esc-status');
   status.style.color='#8b9bc4'; status.textContent='Aplicando...';
   try{
+    var _ses=(await supabase.auth.getSession()).data.session;
     const r = await fetch('/api/escalar-campanha', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:Object.assign({'Content-Type':'application/json'},_ses?{'Authorization':'Bearer '+_ses.access_token}:{}),
       body: JSON.stringify({ campaign_id: escCampanhaId, ...payload })
     });
     const data = await r.json();
