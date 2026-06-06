@@ -9,7 +9,34 @@ async function setStatus(id, status, token, extra = {}) {
   const data = await r.json();
   if (!r.ok || data.error) {
     const msg = data.error?.error_user_msg || data.error?.message || 'erro desconhecido';
-    throw new Error(`[${id}] ${msg}`);
+    const code = data.error?.code;
+    const sub  = data.error?.error_subcode;
+    throw new Error(`[${id}] ${msg}${code != null ? ` (code:${code}${sub != null ? `/sub:${sub}` : ''})` : ''}`);
+  }
+}
+
+// Ativa adset com start_time best-effort: tenta com start_time=now (certo para adsets novos);
+// se o Meta recusar (adset já iniciado não permite editar start_time), retenta só com status=ACTIVE.
+// Se o retry também falhar, propaga o erro real.
+async function activateAdset(id, token) {
+  const now = new Date().toISOString();
+  const r1 = await fetch(`${GRAPH}/${id}`, {
+    method: 'POST',
+    body: new URLSearchParams({ status: 'ACTIVE', start_time: now, access_token: token }),
+  });
+  const d1 = await r1.json();
+  if (r1.ok && !d1.error) return;
+
+  const r2 = await fetch(`${GRAPH}/${id}`, {
+    method: 'POST',
+    body: new URLSearchParams({ status: 'ACTIVE', access_token: token }),
+  });
+  const d2 = await r2.json();
+  if (!r2.ok || d2.error) {
+    const msg = d2.error?.error_user_msg || d2.error?.message || 'erro desconhecido';
+    const code = d2.error?.code;
+    const sub  = d2.error?.error_subcode;
+    throw new Error(`[${id}] ${msg}${code != null ? ` (code:${code}${sub != null ? `/sub:${sub}` : ''})` : ''}`);
   }
 }
 
@@ -45,7 +72,6 @@ export default async function handler(req, res) {
 
     if (acao === 'ativar' || acao === 'pausar') {
       const status = acao === 'ativar' ? 'ACTIVE' : 'PAUSED';
-      const adSetExtra = acao === 'ativar' ? { start_time: new Date().toISOString() } : {};
 
       const [adSetIds, adIds] = await Promise.all([
         getChildIds(campaignId, 'adsets', token),
@@ -54,7 +80,7 @@ export default async function handler(req, res) {
 
       const updates = [
         setStatus(campaignId, status, token),
-        ...adSetIds.map(id => setStatus(id, status, token, adSetExtra)),
+        ...adSetIds.map(id => acao === 'ativar' ? activateAdset(id, token) : setStatus(id, status, token)),
         ...adIds.map(id => setStatus(id, status, token)),
       ];
       await Promise.all(updates);
