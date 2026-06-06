@@ -1178,7 +1178,7 @@ async function excluirAnuncio(adId,nome,campanhaId,ctr,conv){
     var _ses=(await supabase.auth.getSession()).data.session;
     const r=await fetch('/api/anuncio-acao',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},_ses?{'Authorization':'Bearer '+_ses.access_token}:{}),body:JSON.stringify({ad_id:adId})});
     const data=await r.json();
-    if(!r.ok||!data.sucesso) throw new Error(data.error||'Falha ao excluir.');
+    if(!r.ok||!data.sucesso) throw new Error(data.error||data.erro||'Falha ao excluir.');
     renderCriativos(campanhaId);
   }catch(e){ alert('⚠️ '+e.message); }
 }
@@ -1268,7 +1268,7 @@ function enviarCampanhaMeta(e) {
         document.getElementById('form-campanha-meta').reset();
         onMcIntencao();
       } else {
-        setMcStatus('error', `<strong>Erro:</strong> ${data.erro || 'resposta inesperada'}`);
+        setMcStatus('error', `<strong>Erro:</strong> ${data.erro || data.error || 'resposta inesperada'}`);
       }
     })
     .catch(err => setMcStatus('error', 'Falha na requisição: ' + err.message))
@@ -1601,7 +1601,7 @@ async function acaoCampanha(btn){
     var _ses=(await supabase.auth.getSession()).data.session;
     var r=await fetch('/api/campanha-acao',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},_ses?{'Authorization':'Bearer '+_ses.access_token}:{}),body:JSON.stringify({campaignId:id,acao:acao})});
     var d=await r.json();
-    if(!r.ok||!d.sucesso){alert('Erro: '+(d.erro||'resposta inesperada'));setBtns(true);return;}
+    if(!r.ok||!d.sucesso){alert('Erro: '+(d.erro||d.error||'resposta inesperada'));setBtns(true);return;}
     if(acao==='excluir'){row.remove();return;}
     carregarCampanhas();
   }catch(e){alert('Falha de rede: '+e.message);setBtns(true);}
@@ -1681,7 +1681,7 @@ async function aplicarEscala(payload){
       body: JSON.stringify({ campaign_id: escCampanhaId, ...payload })
     });
     const data = await r.json();
-    if(!r.ok || !data.ok) throw new Error(data.error || 'Falha ao escalar.');
+    if(!r.ok || !data.ok) throw new Error(data.error || data.erro || 'Falha ao escalar.');
     status.style.color='#4caf7d';
     status.textContent = `Orçamento: R$ ${data.anteriorReais.toFixed(2)} → R$ ${data.novoReais.toFixed(2)} (${data.nivel}).`;
     if (typeof carregarCampanhas === 'function') carregarCampanhas();
