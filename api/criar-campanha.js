@@ -1,4 +1,5 @@
 import { del } from '@vercel/blob';
+import { getMetaConfig } from '../lib/meta-config.js';
 
 const API_VERSION = "v25.0";
 const GRAPH = `https://graph.facebook.com/${API_VERSION}`;
@@ -61,7 +62,7 @@ export default async function handler(req, res) {
     if (destino === "whatsapp" && !process.env.META_WHATSAPP_NUMBER)
       throw new Error("META_WHATSAPP_NUMBER não configurado no servidor.");
 
-    const ACT = process.env.META_AD_ACCOUNT_ID;
+    const { adAccountId: ACT, pageId: PAGE_ID } = await getMetaConfig(req);
     const reaisEmCentavos = Math.round(Number(orcamentoDiario) * 100);
     const waLink = `https://wa.me/${process.env.META_WHATSAPP_NUMBER}`;
 
@@ -125,7 +126,7 @@ export default async function handler(req, res) {
     };
     if (cfg.destinoWhatsApp) {
       adsetParams.destination_type = "WHATSAPP";
-      adsetParams.promoted_object = JSON.stringify({ page_id: process.env.META_PAGE_ID });
+      adsetParams.promoted_object = JSON.stringify({ page_id: PAGE_ID });
     }
     const adset = await metaPost(`${ACT}/adsets`, adsetParams, "criar conjunto de anúncios");
 
@@ -139,7 +140,7 @@ export default async function handler(req, res) {
         const img = await metaPost(`${ACT}/adimages`, { bytes: item.imagemBase64 }, `${label}: upload`);
         const imageHash = Object.values(img.images)[0].hash;
         creativeSpec = {
-          page_id: process.env.META_PAGE_ID,
+          page_id: PAGE_ID,
           link_data: {
             image_hash: imageHash, message: texto,
             ...(cfg.destinoWhatsApp
@@ -155,7 +156,7 @@ export default async function handler(req, res) {
           ? { type: "WHATSAPP_MESSAGE" }
           : { type: "LEARN_MORE", value: { link } };
         creativeSpec = {
-          page_id: process.env.META_PAGE_ID,
+          page_id: PAGE_ID,
           video_data: { video_id: item.videoId, message: texto, image_url: preferred.uri, call_to_action: cta },
         };
       } else {

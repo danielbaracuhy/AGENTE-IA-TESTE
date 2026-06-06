@@ -1252,11 +1252,12 @@ function enviarCampanhaMeta(e) {
     const btn = document.getElementById('mc-btn-submit');
     btn.disabled = true;
     setMcStatus('info', 'Criando campanha... (4 etapas no Meta)');
+    supabase.auth.getSession().then(({data:{session:_ses}}) =>
     fetch('/api/criar-campanha', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: Object.assign({'Content-Type':'application/json'},_ses?{'Authorization':'Bearer '+_ses.access_token}:{}),
       body: JSON.stringify(payload),
-    })
+    }))
     .then(r => r.json())
     .then(data => {
       if (data.sucesso) {
@@ -1450,7 +1451,8 @@ async function enviarCampanha(){
     videoUrl:videoUrl
   };
   try{
-    var res=await fetch('/api/criar-campanha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    var _ses=(await supabase.auth.getSession()).data.session;
+    var res=await fetch('/api/criar-campanha',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},_ses?{'Authorization':'Bearer '+_ses.access_token}:{}),body:JSON.stringify(payload)});
     var data=await res.json();
     if(data.sucesso){out.style.color='#34d399';out.textContent='✅ '+data.mensagem+' (ID: '+data.campaign_id+')';}
     else{
