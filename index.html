@@ -1603,6 +1603,10 @@ async function acaoCampanha(btn){
     var d=await r.json();
     if(!r.ok||!d.sucesso){alert('Erro: '+(d.erro||d.error||'resposta inesperada'));setBtns(true);return;}
     if(acao==='excluir'){row.remove();return;}
+    if(acao==='ativar'){
+      renderCampanhas(_ultimasCampanhas.map(function(c){return c.id===id?Object.assign({},c,{status:'ACTIVE',effective_status:'PENDING_REVIEW'}):c;}));
+      return;
+    }
     carregarCampanhas();
   }catch(e){alert('Falha de rede: '+e.message);setBtns(true);}
 }
