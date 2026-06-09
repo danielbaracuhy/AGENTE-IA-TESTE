@@ -37,21 +37,6 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 }
 .up-title span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .up-sub{color:var(--muted);text-align:center;max-width:480px;font-size:15px;margin-bottom:36px}
-.drop-zone{
-  width:100%;max-width:520px;background:var(--surface);
-  border:2px dashed var(--border);border-radius:18px;
-  padding:48px 28px;text-align:center;cursor:pointer;
-  transition:all .25s;position:relative;margin-bottom:16px
-}
-.drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:rgba(79,126,248,.07);transform:scale(1.01)}
-.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-.dz-icon{font-size:42px;margin-bottom:12px;display:block}
-.dz-title{font-size:16px;font-weight:600;margin-bottom:4px}
-.dz-sub{font-size:12px;color:var(--muted)}
-#file-name{
-  display:none;margin-top:12px;background:rgba(79,126,248,.15);
-  border-radius:8px;padding:7px 14px;font-size:12px;color:var(--accent)
-}
 .btn-analyze{
   width:100%;max-width:520px;border:none;border-radius:14px;
   padding:15px;font-size:16px;font-weight:700;color:#fff;cursor:pointer;
@@ -448,7 +433,7 @@ tr:hover td{background:var(--surface2)}
 // ═══════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════
-const S = { file: null, data: null, charts: {} };
+const S = { data: null, charts: {} };
 
 function screen(id) {
   ['screen-upload','screen-loading','screen-dashboard'].forEach(s => {
@@ -456,127 +441,6 @@ function screen(id) {
   });
   document.getElementById(id).style.display =
     id === 'screen-loading' ? 'flex' : id === 'screen-dashboard' ? 'block' : 'flex';
-}
-
-// ═══════════════════════════════════════════════════════
-// CSV PARSER
-// ═══════════════════════════════════════════════════════
-function parseCSV(raw) {
-  if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
-  const lines = raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l => l.trim());
-  if (lines.length < 2) return null;
-
-  function parseLine(line) {
-    const out = []; let f = '', q = false;
-    for (let i = 0; i < line.length; i++) {
-      const c = line[i];
-      if (c === '"') { if (q && line[i+1]==='"') { f+='"'; i++; } else q=!q; }
-      else if (c === ',' && !q) { out.push(f.trim()); f=''; }
-      else f += c;
-    }
-    out.push(f.trim());
-    return out;
-  }
-
-  const headers = parseLine(lines[0]);
-  const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const vals = parseLine(lines[i]);
-    if (vals.every(v => !v)) continue;
-    const obj = {};
-    headers.forEach((h,j) => { obj[h] = vals[j] || ''; });
-    rows.push(obj);
-  }
-  return { headers, rows };
-}
-
-// ═══════════════════════════════════════════════════════
-// COLUMN MAPPER
-// ═══════════════════════════════════════════════════════
-function norm(s) {
-  return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,' ').toLowerCase().trim().replace(/\s+/g,' ');
-}
-
-const COLS = {
-  nome:       ['nome da campanha'],
-  status:     ['veiculacao da campanha'],
-  inicio:     ['inicio dos relatorios'],
-  fim:        ['encerramento dos relatorios'],
-  investido:  ['valor usado brl','quantia gasta brl'],
-  alcance:    ['alcance'],
-  impressoes: ['impressoes'],
-  frequencia: ['frequencia'],
-  cliques:    ['cliques no link'],
-  ctr:        ['ctr taxa de cliques no link'],
-  cpc:        ['cpc custo por clique no link brl'],
-  cpm:        ['cpm custo por 1 000 impressoes brl','cpm brl'],
-  lp_views:   ['visualizacoes da pagina de destino'],
-  custo_lp:   ['custo por visualizacao da pagina de destino brl'],
-  conversoes: ['resultados'],
-  cpp:        ['custo por resultados'],
-};
-
-function buildMap(headers) {
-  const nh = headers.map(h => ({ orig: h, n: norm(h) }));
-  const map = {};
-  for (const [field, pats] of Object.entries(COLS)) {
-    outer: for (const { orig, n } of nh) {
-      for (const pat of pats) {
-        const np = norm(pat);
-        if (n.includes(np) || np.includes(n)) { map[field] = orig; break outer; }
-      }
-    }
-  }
-  return map;
-}
-
-function g(row, map, field) { const k = map[field]; return k ? (row[k]||'') : ''; }
-function fF(v) { if (!v||v==='-') return 0; return parseFloat(String(v).replace(',','.'))||0; }
-function fI(v) { return Math.round(fF(v)); }
-
-// ═══════════════════════════════════════════════════════
-// DATA PROCESSOR
-// ═══════════════════════════════════════════════════════
-function process({ headers, rows }) {
-  const map = buildMap(headers);
-  const r0 = rows[0] || {};
-  const periodo = { inicio: g(r0,map,'inicio'), fim: g(r0,map,'fim') };
-
-  const camps = rows.map(row => {
-    const nome       = g(row,map,'nome')||'Campanha';
-    const status     = g(row,map,'status')||'';
-    const investido  = fF(g(row,map,'investido'));
-    const alcance    = fI(g(row,map,'alcance'));
-    const impressoes = fI(g(row,map,'impressoes'));
-    const frequencia = fF(g(row,map,'frequencia'));
-    const cliques    = fI(g(row,map,'cliques'));
-    const ctr        = fF(g(row,map,'ctr'));
-    const cpc        = fF(g(row,map,'cpc'));
-    const cpm        = fF(g(row,map,'cpm'));
-    const lp_views   = fI(g(row,map,'lp_views'));
-    const custo_lp   = fF(g(row,map,'custo_lp'));
-    const conversoes = fI(g(row,map,'conversoes'));
-    const cpp        = fF(g(row,map,'cpp'));
-    const taxa_clp   = cliques > 0 ? lp_views/cliques*100 : 0;
-    const taxa_conv  = lp_views > 0 ? conversoes/lp_views*100 : 0;
-    return { nome, status, investido, alcance, impressoes, frequencia,
-             cliques, ctr, cpc, cpm, lp_views, custo_lp,
-             conversoes, cpp, taxa_clp, taxa_conv };
-  });
-
-  const sum = k => camps.reduce((a,c) => a+c[k], 0);
-  const ti = sum('investido'), ta = sum('alcance'), tIm = sum('impressoes');
-  const tc = sum('cliques'), tlp = sum('lp_views'), tv = sum('conversoes');
-  const cpp_m  = tv > 0 ? ti/tv : 0;
-  const ctr_m  = tIm > 0 ? tc/tIm*100 : 0;
-  const conv_m = tlp > 0 ? tv/tlp*100 : 0;
-  const clp_m  = tc > 0 ? tlp/tc*100 : 0;
-  const cpc_m  = tc > 0 ? ti/tc : 0;
-
-  const totals = { ti, ta, tIm, tc, tlp, tv, cpp_m, ctr_m, conv_m, clp_m, cpc_m };
-  const alerts = genAlerts(camps);
-  const recs   = genRecs(camps, totals);
-  return { periodo, camps, totals, alerts, recs };
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1030,45 +894,6 @@ function runLoader(cb) {
 }
 
 // ═══════════════════════════════════════════════════════
-// FILE HANDLING
-// ═══════════════════════════════════════════════════════
-function setFile(file) {
-  if (!file || !file.name.toLowerCase().endsWith('.csv')) {
-    alert('Selecione um arquivo .csv válido do Meta Ads.'); return;
-  }
-  S.file = file;
-  const el = document.getElementById('file-name');
-  el.textContent = '📄 '+file.name; el.style.display = 'block';
-  document.getElementById('btn-analyze').disabled = false;
-}
-
-function analyze() {
-  if (!S.file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const raw = e.target.result;
-    runLoader(() => {
-      try {
-        const parsed = parseCSV(raw);
-        if (!parsed || !parsed.rows.length) {
-          screen('screen-upload');
-          alert('Não foi possível processar o CSV. Verifique se é um export válido do Meta Ads.');
-          return;
-        }
-        const data = process(parsed);
-        render(data, S.file.name);
-        screen('screen-dashboard');
-      } catch(err) {
-        console.error(err);
-        screen('screen-upload');
-        alert('Erro ao processar: ' + err.message);
-      }
-    });
-  };
-  reader.readAsText(S.file, 'UTF-8');
-}
-
-// ═══════════════════════════════════════════════════════
 // TEMPO REAL — API
 // ═══════════════════════════════════════════════════════
 function processFromAPI(apiData) {
@@ -1189,7 +1014,7 @@ async function excluirAnuncio(adId,nome,campanhaId,ctr,conv){
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-new').addEventListener('click', () => {
     destroyCharts();
-    S.file = null; S.data = null;
+    S.data = null;
     screen('screen-upload');
   });
 
