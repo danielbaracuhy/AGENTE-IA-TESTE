@@ -21,7 +21,7 @@ proposto e REJEITADO por resolver um problema que não era o observado).
 - Deploy: editar → git add/commit → git push origin master → a Vercel publica sozinha.
 - NÃO confundir com a pasta "AGENTE ANALISE ADS".
 - A raiz serve `index.html`.
-- HEAD atual em master: `89558e2` (remoção dos logs de debug do auto-refresh).
+- HEAD atual em master: `bf39693` (limpeza: remove codigo morto do analisador CSV).
 
 ## Stack
 HTML/CSS/JS puro (sem bundler), ESM via CDN; serverless Vercel (Node 18+, fetch nativo);
@@ -142,8 +142,8 @@ listar-campanhas traz: status configurado + effective_status agregado + motivo_r
 thumbnails + daily/lifetime budget. campanha-acao usa activateAdset (start_time best-effort).
 
 ## PENDÊNCIAS / PRÓXIMOS (em ordem)
-1. Limpeza: remover código morto de CSV do analisador (drop-zone, setFile, analyze, parseCSV).
-   Trocar url.parse() por new URL() (DEP0169).
+1. ~~Limpeza concluída (09/06): código morto CSV removido (commit bf39693);
+   url.parse() já estava substituído por new URL() em commit anterior.~~
 2. Onboarding por cliente; papel admin/agência; coluna whatsapp no meta_config.
 3. Meta App Review + Business Verification (Advanced Access ads_management).
 4. Relatório semanal consolidado.
@@ -182,3 +182,6 @@ piscar de "Em análise" pra "Pausada" sozinho.)
 - ad_review_feedback é objeto aninhado (global + placement_specific) — achatar com Object.values.
 - Orçamento do Meta vem em CENTAVOS (string) → /100 + BRL, uma vez só no backend.
 - start_time não é editável em adset já iniciado → ativação best-effort (tenta com, retry sem).
+- DEP0169 (url.parse): já estava corrigido antes do resumo registrar — grep confirmou new URL()
+  nos dois únicos endpoints que leem query params (insights-campanhas, insights-anuncios). Ao
+  registrar pendências técnicas, verificar no código antes de assumir que ainda existe.
