@@ -1475,7 +1475,6 @@ async function carregarCampanhas(){
     var _ses=(await supabase.auth.getSession()).data.session;
     var r=await fetch('/api/listar-campanhas',{headers:_ses?{'Authorization':'Bearer '+_ses.access_token}:{}});
     var d=await r.json();
-    console.log('[auto] fetch retornou, status 1a campanha=', d.campanhas&&d.campanhas[0]&&d.campanhas[0].effective_status);
     if(!r.ok||d.erro){lista.style.color='#f87171';lista.innerHTML='❌ '+escCamp(d.erro||'Erro desconhecido.');return;}
     renderCampanhas(d.campanhas);
   }catch(e){lista.style.color='#f87171';lista.innerHTML='❌ Falha de rede: '+e.message;}
@@ -1568,15 +1567,14 @@ function _agendarAutoRefresh(){
   if(!_autoRefreshBound){
     _autoRefreshBound=true;
     document.addEventListener('visibilitychange',function(){
-      if(document.hidden){console.log('[auto] aba oculta, timer cancelado');clearTimeout(_autoRefreshTimer);_autoRefreshTimer=null;}
+      if(document.hidden){clearTimeout(_autoRefreshTimer);_autoRefreshTimer=null;}
       else if(_temEmAnalise()){carregarCampanhas();}
     });
   }
   if(document.hidden)return;
   var _modaisAbertos=['modal-ativar','modal-escalar','modalCampanha'].some(function(id){var el=document.getElementById(id);return el&&el.style.display!=='none';});
-  if(_modaisAbertos){console.log('[auto] modal detectado aberto, re-check em 45s');_autoRefreshTimer=setTimeout(_agendarAutoRefresh,45000);return;}
-  console.log('[auto] timer agendado, 45s');
-  _autoRefreshTimer=setTimeout(function(){console.log('[auto] TIMER DISPAROU');carregarCampanhas();},45000);
+  if(_modaisAbertos){_autoRefreshTimer=setTimeout(_agendarAutoRefresh,45000);return;}
+  _autoRefreshTimer=setTimeout(carregarCampanhas,45000);
 }
 
 function verMotivoReprovacao(btn){
