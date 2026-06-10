@@ -1,6 +1,7 @@
 {
   "routes": [
     { "handle": "filesystem" },
+    { "src": "/([^/]+\\.html)", "dest": "/$1" },
     {
       "src": "/(.*)",
       "dest": "/CAMPANHAS/index.html",
