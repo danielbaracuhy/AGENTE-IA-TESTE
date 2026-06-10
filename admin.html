@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Painel Admin — Digitalizando Negócios</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e334d;
+  --accent:#4f7ef8;--accent2:#7c3aed;
+  --green:#22c55e;--yellow:#f59e0b;--red:#ef4444;
+  --text:#e2e8f0;--muted:#94a3b8;
+  --radius:12px;--shadow:0 4px 24px rgba(0,0,0,.5);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.6;min-height:100vh}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* HEADER */
+.dash-header{background:linear-gradient(135deg,#12152b,#1a1d27);border-bottom:1px solid var(--border);padding:14px 24px;position:sticky;top:0;z-index:100}
+.dash-header-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.dash-brand{display:flex;align-items:center;gap:12px}
+.brand-icon{width:38px;height:38px;border-radius:9px;flex-shrink:0;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:18px}
+.brand-title{font-size:15px;font-weight:700;color:#fff}
+.brand-sub{font-size:10px;color:var(--muted)}
+
+/* BUTTONS */
+.btn{border:none;border-radius:10px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .2s}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-success{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:var(--green)}
+.btn-success:hover{background:rgba(34,197,94,.25)}
+.btn-danger{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:var(--red)}
+.btn-danger:hover{background:rgba(239,68,68,.25)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+
+/* BODY */
+.dash-body{max-width:1280px;margin:0 auto;padding:28px 20px 60px}
+.sec-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* TABLE */
+.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:620px}
+thead{background:var(--surface2)}
+th{padding:10px 14px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;white-space:nowrap}
+td{padding:11px 14px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--surface2)}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600}
+.bg-green{background:rgba(34,197,94,.15);color:var(--green)}
+.bg-yellow{background:rgba(245,158,11,.15);color:var(--yellow)}
+.bg-red{background:rgba(239,68,68,.15);color:var(--red)}
+.act-cell{display:flex;gap:6px;flex-wrap:wrap}
+
+/* GLOBAL MSG BAR */
+.msg-bar{font-size:12px;padding:8px 12px;border-radius:9px;margin-bottom:14px;display:none}
+.msg-bar.success{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.25);display:block}
+.msg-bar.error{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2);display:block}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.75);backdrop-filter:blur(4px)}
+.mc-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);width:100%;max-width:500px;max-height:90vh;overflow-y:auto}
+.mc-top{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1}
+.mc-top h2{font-size:14px;font-weight:700;color:var(--text)}
+.mc-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:17px;padding:4px 7px;border-radius:7px;transition:all .15s;line-height:1}
+.mc-close:hover{color:var(--text);background:var(--surface2)}
+.mc-body{padding:20px 22px;display:flex;flex-direction:column;gap:14px}
+.mc-field{display:flex;flex-direction:column;gap:5px}
+.mc-field label{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.mc-field input{background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;padding:8px 11px;outline:none;width:100%;transition:border-color .15s}
+.mc-field input:focus{border-color:var(--accent)}
+.mc-status{margin:0 22px 14px;padding:10px 13px;border-radius:9px;font-size:13px;display:none;line-height:1.5}
+.mc-status.info{background:rgba(79,126,248,.1);color:var(--accent);border:1px solid rgba(79,126,248,.3);display:block}
+.mc-status.success{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.3);display:block}
+.mc-status.error{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.3);display:block}
+.mc-foot{padding:13px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:9px;position:sticky;bottom:0;background:var(--surface)}
+
+@media(max-width:600px){
+  .dash-body{padding:16px 12px 40px}
+  .btn{padding:6px 10px;font-size:11px}
+}
+</style>
+</head>
+<body>
+
+<div id="admin-root" style="display:none">
+
+  <header class="dash-header">
+    <div class="dash-header-inner">
+      <div class="dash-brand">
+        <div class="brand-icon">📊</div>
+        <div>
+          <div class="brand-title">Digitalizando Negócios</div>
+          <div class="brand-sub">Painel Admin</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost" id="btn-sair">⎋ Sair</button>
+    </div>
+  </header>
+
+  <main class="dash-body">
+    <p class="sec-title">Clientes</p>
+    <div id="msg-global" class="msg-bar"></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome da empresa</th>
+            <th>Status</th>
+            <th>Cadastro</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </main>
+
+</div>
+
+<!-- Modal Config Meta -->
+<div id="modal-config" class="modal-overlay" style="display:none">
+  <div class="mc-box">
+    <div class="mc-top">
+      <h2 id="modal-titulo">Config Meta</h2>
+      <button class="mc-close" id="btn-modal-fechar">✕</button>
+    </div>
+    <div class="mc-body">
+      <div class="mc-field">
+        <label>ID da Conta de Anúncio</label>
+        <input id="f-account"  type="text" placeholder="act_000000000000000"/>
+      </div>
+      <div class="mc-field">
+        <label>ID da Página</label>
+        <input id="f-page"     type="text" placeholder="000000000000000"/>
+      </div>
+      <div class="mc-field">
+        <label>ID do Business</label>
+        <input id="f-business" type="text" placeholder="000000000000000"/>
+      </div>
+      <div class="mc-field">
+        <label>WhatsApp (ex: 5517991414397)</label>
+        <input id="f-whatsapp" type="text" placeholder="5511999999999"/>
+      </div>
+    </div>
+    <div id="modal-status" class="mc-status"></div>
+    <div class="mc-foot">
+      <button class="btn btn-ghost"   id="btn-modal-cancelar">Fechar</button>
+      <button class="btn btn-primary" id="btn-modal-salvar">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+let _token = null;
+let _modalId = null;
+
+const hdr  = (extra = {}) => ({ Authorization: 'Bearer ' + _token, ...extra });
+const hdrJ = ()            => hdr({ 'Content-Type': 'application/json' });
+
+function fmtData(iso) {
+  if (!iso) return '—';
+  const [y, m, d] = iso.slice(0, 10).split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function badgeHtml(status) {
+  const map = { ativo: ['bg-green','Ativo'], trial: ['bg-yellow','Trial'], suspenso: ['bg-red','Suspenso'] };
+  const [cls, lbl] = map[status] ?? ['bg-yellow', status];
+  return `<span class="badge ${cls}">${lbl}</span>`;
+}
+
+function acoesHtml(id, nomeEnc, status) {
+  return `
+    ${status !== 'ativo'    ? `<button class="btn btn-success btn-ativar"    data-id="${id}">✓ Ativar</button>`    : ''}
+    ${status !== 'suspenso' ? `<button class="btn btn-danger  btn-suspender" data-id="${id}">✕ Suspender</button>` : ''}
+    <button class="btn btn-ghost btn-config" data-id="${id}" data-nome="${nomeEnc}">⚙ Config Meta</button>
+  `;
+}
+
+function renderClientes(clientes) {
+  const tbody = document.getElementById('tbody');
+  if (!clientes.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:28px;color:var(--muted)">Nenhum cliente cadastrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = clientes.map(c => {
+    const nomeEnc = encodeURIComponent(c.nome_empresa || '');
+    return `
+      <tr data-id="${c.id}" data-nome="${nomeEnc}">
+        <td>${c.nome_empresa || '—'}</td>
+        <td class="td-badge">${badgeHtml(c.status)}</td>
+        <td style="color:var(--muted);font-size:11px">${fmtData(c.created_at)}</td>
+        <td><div class="act-cell">${acoesHtml(c.id, nomeEnc, c.status)}</div></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function setGlobal(msg, tipo) {
+  const el = document.getElementById('msg-global');
+  el.textContent = msg;
+  el.className = 'msg-bar ' + tipo;
+  if (tipo === 'success') setTimeout(() => { el.className = 'msg-bar'; }, 3000);
+}
+
+function setModalStatus(msg, tipo) {
+  const el = document.getElementById('modal-status');
+  el.textContent = msg;
+  el.className = 'mc-status' + (tipo ? ' ' + tipo : '');
+}
+
+async function atualizarStatus(cliente_id, novoStatus, btn) {
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/admin-atualizar-status', {
+      method: 'PATCH',
+      headers: hdrJ(),
+      body: JSON.stringify({ cliente_id, status: novoStatus }),
+    });
+    const data = await r.json();
+    if (!r.ok) { setGlobal(data.erro || 'Erro ao atualizar.', 'error'); btn.disabled = false; return; }
+
+    const row = document.querySelector(`tr[data-id="${cliente_id}"]`);
+    const nomeEnc = row.dataset.nome;
+    row.querySelector('.td-badge').innerHTML = badgeHtml(novoStatus);
+    row.querySelector('.act-cell').innerHTML = acoesHtml(cliente_id, nomeEnc, novoStatus);
+    setGlobal('Status atualizado com sucesso.', 'success');
+  } catch (e) {
+    setGlobal(e.message, 'error');
+    btn.disabled = false;
+  }
+}
+
+async function abrirModal(cliente_id, nome) {
+  _modalId = cliente_id;
+  document.getElementById('modal-titulo').textContent = 'Config Meta — ' + nome;
+  ['f-account','f-page','f-business','f-whatsapp'].forEach(id => { document.getElementById(id).value = ''; });
+  setModalStatus('Carregando...', 'info');
+  document.getElementById('modal-config').style.display = 'flex';
+
+  try {
+    const r = await fetch('/api/admin-config-meta?cliente_id=' + cliente_id, { headers: hdr() });
+    const data = await r.json();
+    setModalStatus('', '');
+    if (!r.ok) { setModalStatus(data.erro || 'Erro ao buscar config.', 'error'); return; }
+    const cfg = data.meta_config;
+    if (cfg) {
+      document.getElementById('f-account').value  = cfg.meta_ad_account_id || '';
+      document.getElementById('f-page').value     = cfg.meta_page_id       || '';
+      document.getElementById('f-business').value = cfg.meta_business_id   || '';
+      document.getElementById('f-whatsapp').value = cfg.whatsapp           || '';
+    }
+  } catch (e) {
+    setModalStatus(e.message, 'error');
+  }
+}
+
+async function salvarConfig() {
+  const btn = document.getElementById('btn-modal-salvar');
+  btn.disabled = true;
+  setModalStatus('Salvando...', 'info');
+  try {
+    const r = await fetch('/api/admin-config-meta', {
+      method: 'PATCH',
+      headers: hdrJ(),
+      body: JSON.stringify({
+        cliente_id:         _modalId,
+        meta_ad_account_id: document.getElementById('f-account').value.trim()  || null,
+        meta_page_id:       document.getElementById('f-page').value.trim()     || null,
+        meta_business_id:   document.getElementById('f-business').value.trim() || null,
+        whatsapp:           document.getElementById('f-whatsapp').value.trim() || null,
+      }),
+    });
+    const data = await r.json();
+    btn.disabled = false;
+    if (!r.ok) { setModalStatus(data.erro || 'Erro ao salvar.', 'error'); return; }
+    setModalStatus('✓ Config salva com sucesso.', 'success');
+    setTimeout(fecharModal, 1200);
+  } catch (e) {
+    btn.disabled = false;
+    setModalStatus(e.message, 'error');
+  }
+}
+
+function fecharModal() {
+  document.getElementById('modal-config').style.display = 'none';
+  _modalId = null;
+}
+
+// Event listeners
+document.getElementById('btn-sair').addEventListener('click', async () => {
+  await supabase.auth.signOut();
+  window.location.href = '/';
+});
+
+document.getElementById('tbody').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  if (btn.classList.contains('btn-ativar'))    atualizarStatus(id, 'ativo', btn);
+  if (btn.classList.contains('btn-suspender')) atualizarStatus(id, 'suspenso', btn);
+  if (btn.classList.contains('btn-config'))    abrirModal(id, decodeURIComponent(btn.dataset.nome));
+});
+
+document.getElementById('btn-modal-salvar').addEventListener('click', salvarConfig);
+document.getElementById('btn-modal-fechar').addEventListener('click', fecharModal);
+document.getElementById('btn-modal-cancelar').addEventListener('click', fecharModal);
+document.getElementById('modal-config').addEventListener('click', e => {
+  if (e.target.id === 'modal-config') fecharModal();
+});
+
+// Boot — verifica sessão e permissão admin antes de renderizar qualquer coisa
+const { data: { session } } = await supabase.auth.getSession();
+if (!session) { window.location.href = '/'; }
+else {
+  _token = session.access_token;
+  const r = await fetch('/api/admin-listar-clientes', { headers: hdr() });
+  if (!r.ok) { window.location.href = '/'; }
+  else {
+    document.getElementById('admin-root').style.display = '';
+    renderClientes(await r.json());
+  }
+}
+</script>
+</body>
+</html>
