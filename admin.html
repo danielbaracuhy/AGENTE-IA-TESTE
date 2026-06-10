@@ -223,10 +223,10 @@ function setModalStatus(msg, tipo) {
 async function atualizarStatus(cliente_id, novoStatus, btn) {
   btn.disabled = true;
   try {
-    const r = await fetch('/api/admin-atualizar-status', {
+    const r = await fetch('/api/admin', {
       method: 'PATCH',
       headers: hdrJ(),
-      body: JSON.stringify({ cliente_id, status: novoStatus }),
+      body: JSON.stringify({ action: 'status', cliente_id, status: novoStatus }),
     });
     const data = await r.json();
     if (!r.ok) { setGlobal(data.erro || 'Erro ao atualizar.', 'error'); btn.disabled = false; return; }
@@ -250,7 +250,7 @@ async function abrirModal(cliente_id, nome) {
   document.getElementById('modal-config').style.display = 'flex';
 
   try {
-    const r = await fetch('/api/admin-config-meta?cliente_id=' + cliente_id, { headers: hdr() });
+    const r = await fetch('/api/admin?action=config&cliente_id=' + cliente_id, { headers: hdr() });
     const data = await r.json();
     setModalStatus('', '');
     if (!r.ok) { setModalStatus(data.erro || 'Erro ao buscar config.', 'error'); return; }
@@ -271,10 +271,11 @@ async function salvarConfig() {
   btn.disabled = true;
   setModalStatus('Salvando...', 'info');
   try {
-    const r = await fetch('/api/admin-config-meta', {
+    const r = await fetch('/api/admin', {
       method: 'PATCH',
       headers: hdrJ(),
       body: JSON.stringify({
+        action:             'config',
         cliente_id:         _modalId,
         meta_ad_account_id: document.getElementById('f-account').value.trim()  || null,
         meta_page_id:       document.getElementById('f-page').value.trim()     || null,
@@ -325,7 +326,7 @@ const { data: { session } } = await supabase.auth.getSession();
 if (!session) { window.location.href = '/'; }
 else {
   _token = session.access_token;
-  const r = await fetch('/api/admin-listar-clientes', { headers: hdr() });
+  const r = await fetch('/api/admin', { headers: hdr() });
   if (!r.ok) { window.location.href = '/'; }
   else {
     document.getElementById('admin-root').style.display = '';
