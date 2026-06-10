@@ -312,6 +312,7 @@ tr:hover td{background:var(--surface2)}
         <button id="btn-carregar-camps" onclick="carregarCampanhas()" style="padding:6px 14px;border:none;border-radius:8px;background:var(--accent2);color:#fff;font-size:13px;font-weight:600;cursor:pointer">Carregar</button>
         <span id="camps-refresh-hint" style="display:none;font-size:10px;color:var(--muted);margin-left:4px;">↻ ao vivo</span>
       </div>
+      <div id="saldo-conta" style="display:none;font-size:12px;color:var(--muted);margin-bottom:8px;"></div>
       <div id="camps-lista" style="font-size:13px;color:var(--muted)">Clique em "Carregar" para ver suas campanhas.</div>
     </div>
   </div>
@@ -1302,6 +1303,8 @@ async function carregarCampanhas(){
     var d=await r.json();
     if(!r.ok||d.erro){lista.style.color='#f87171';lista.innerHTML='❌ '+escCamp(d.erro||'Erro desconhecido.');return;}
     renderCampanhas(d.campanhas);
+    var saldoEl=document.getElementById('saldo-conta');
+    if(saldoEl){if(d.saldo){saldoEl.textContent='💰 Saldo disponível: '+d.saldo.valor.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});saldoEl.style.display='block';}else{saldoEl.style.display='none';}}
   }catch(e){lista.style.color='#f87171';lista.innerHTML='❌ Falha de rede: '+e.message;}
   finally{btn.disabled=false;}
 }

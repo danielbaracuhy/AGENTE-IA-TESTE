@@ -41,7 +41,16 @@ export default async function handler(req, res) {
       limit: '100',
       access_token: process.env.META_ACCESS_TOKEN,
     });
-    const r = await fetch(`${GRAPH}/${ACT}/campaigns?${qs}`);
+    const saldoQs = new URLSearchParams({
+      fields: 'balance,currency,is_prepay_account',
+      access_token: process.env.META_ACCESS_TOKEN,
+    });
+    const [campanhasResult, saldoResult] = await Promise.allSettled([
+      fetch(`${GRAPH}/${ACT}/campaigns?${qs}`),
+      fetch(`${GRAPH}/${ACT}?${saldoQs}`),
+    ]);
+    if (campanhasResult.status === 'rejected') throw campanhasResult.reason;
+    const r = campanhasResult.value;
     const data = await r.json();
     if (!r.ok || data.error) {
       const msg = data.error?.error_user_msg || data.error?.message || 'erro desconhecido';
@@ -90,7 +99,20 @@ export default async function handler(req, res) {
           thumbnails,
         };
       });
-    return res.status(200).json({ campanhas });
+    let saldo;
+    if (saldoResult.status === 'fulfilled') {
+      try {
+        const sr = saldoResult.value;
+        const sd = await sr.json();
+        if (sr.ok && !sd.error && sd.is_prepay_account) {
+          saldo = { valor: parseFloat(sd.balance) / 100, moeda: sd.currency };
+        }
+      } catch (_) {}
+    }
+
+    const resp = { campanhas };
+    if (saldo) resp.saldo = saldo;
+    return res.status(200).json(resp);
   } catch (e) {
     return res.status(500).json({ erro: e.message });
   }
