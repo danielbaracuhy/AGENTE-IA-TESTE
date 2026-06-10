@@ -21,7 +21,7 @@ proposto e REJEITADO por resolver um problema que não era o observado).
 - Deploy: editar → git add/commit → git push origin master → a Vercel publica sozinha.
 - NÃO confundir com a pasta "AGENTE ANALISE ADS".
 - A raiz serve `index.html`.
-- HEAD atual em master: `5a8a9c9` (feat: whatsapp por cliente em criar-campanha (fallback env)).
+- HEAD atual em master: `b38ce5b` (refactor: consolida endpoints admin em api/admin.js).
 
 ## Stack
 HTML/CSS/JS puro (sem bundler), ESM via CDN; serverless Vercel (Node 18+, fetch nativo);
@@ -146,7 +146,10 @@ thumbnails + daily/lifetime budget. campanha-acao usa activateAdset (start_time 
    url.parse() já estava substituído por new URL() em commit anterior.~~
 2. ~~2a concluída (10/06): coluna whatsapp em meta_config; getMetaConfig expõe whatsapp;
    criar-campanha usa número do cliente com fallback env (commits b7a4937, 5a8a9c9).~~
-   2b e 2c pendentes: papel admin/agência + onboarding por cliente.
+   ~~2b concluída (10/06): painel admin em /admin.html — lista clientes, ativar/suspender,
+   config Meta por cliente; endpoints consolidados em api/admin.js (limite Vercel Hobby).
+   Commits eb760e6→b38ce5b.~~
+   2c pendente: onboarding por cliente.
 3. Meta App Review + Business Verification — EM ANDAMENTO (09/06):
    ✅ Business Verification enviada (aguardando aprovação do Meta)
    ✅ privacidade.html publicada (agente-ia-teste-roan.vercel.app/privacidade.html)
