@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Exclusão de Dados — Digitalizando Negócios</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--border:#2e334d;
+  --accent:#4f7ef8;--accent2:#7c3aed;
+  --text:#e2e8f0;--muted:#94a3b8;
+  --green:#22c55e;
+  --radius:12px;
+}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Segoe UI',system-ui,sans-serif;
+  font-size:16px;line-height:1.75;min-height:100vh;
+}
+header{
+  background:linear-gradient(135deg,#12152b,#1a1d27);
+  border-bottom:1px solid var(--border);
+  padding:18px 24px;
+}
+.brand{
+  max-width:760px;margin:0 auto;
+  display:flex;align-items:center;gap:12px;
+}
+.brand-icon{
+  width:38px;height:38px;border-radius:9px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.brand-name{font-size:15px;font-weight:700;color:#fff}
+.brand-sub{font-size:11px;color:var(--muted)}
+
+main{
+  max-width:760px;margin:0 auto;
+  padding:48px 24px 80px;
+}
+h1{
+  font-size:clamp(22px,5vw,32px);font-weight:800;
+  background:linear-gradient(135deg,#fff 0%,#94a3b8 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:6px;
+}
+.updated{font-size:13px;color:var(--muted);margin-bottom:24px}
+.lead{
+  font-size:16px;color:var(--muted);
+  margin-bottom:40px;
+  padding:14px 18px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+}
+
+h2{
+  font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--muted);margin:36px 0 10px;
+  padding-bottom:8px;border-bottom:1px solid var(--border);
+}
+p{color:var(--text);margin-bottom:12px}
+ul{
+  list-style:none;padding:0;margin-bottom:12px;
+  display:flex;flex-direction:column;gap:6px;
+}
+ul li{
+  padding:10px 14px 10px 30px;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  font-size:15px;color:var(--text);
+  position:relative;
+}
+ul li::before{
+  content:'–';position:absolute;left:12px;color:var(--accent);font-weight:700;
+}
+
+.cta{
+  display:inline-block;margin-top:8px;
+  padding:12px 24px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;font-weight:700;font-size:15px;text-decoration:none;
+  transition:opacity .2s,transform .2s;
+}
+.cta:hover{opacity:.9;transform:translateY(-2px)}
+
+.notice{
+  margin-top:36px;padding:16px 18px;
+  background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.25);
+  border-radius:var(--radius);font-size:14px;color:var(--text);
+}
+.notice strong{color:var(--green)}
+
+footer{
+  border-top:1px solid var(--border);
+  padding:24px;text-align:center;
+}
+footer a{
+  color:var(--accent);text-decoration:none;font-size:14px;font-weight:600;
+}
+footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-icon">📊</div>
+    <div>
+      <div class="brand-name">Digitalizando Negócios</div>
+      <div class="brand-sub">Gestão de Anúncios Meta Ads</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <h1>Exclusão de Dados</h1>
+  <p class="updated">Última atualização: 09/06/2026</p>
+  <p class="lead">Esta página explica como solicitar a exclusão dos seus dados do aplicativo.</p>
+
+  <h2>Como pedir a exclusão</h2>
+  <p>Envie um e-mail para <a href="mailto:iacomjesuss@gmail.com?subject=Exclusão de dados" style="color:var(--accent)">iacomjesuss@gmail.com</a> com o assunto <strong>"Exclusão de dados"</strong>, a partir do e-mail cadastrado na sua conta. Você também poderá pedir a exclusão pela área de configurações da conta no aplicativo, quando disponível.</p>
+  <a class="cta" href="mailto:iacomjesuss@gmail.com?subject=Exclusão de dados">Solicitar exclusão por e-mail</a>
+
+  <h2>O que excluímos</h2>
+  <ul>
+    <li>Sua conta e seus dados de cadastro.</li>
+    <li>Os identificadores e configurações de conexão com o Meta guardados por nós.</li>
+    <li>Quaisquer mídias temporárias ainda armazenadas.</li>
+  </ul>
+
+  <h2>Em quanto tempo</h2>
+  <p>Concluímos a exclusão em até <strong>30 dias</strong> a partir do pedido, e confirmamos por e-mail quando terminar.</p>
+
+  <div class="notice">
+    <strong>Importante:</strong> A exclusão no nosso aplicativo não apaga os dados que pertencem à sua conta do Meta (conta de anúncios, página, histórico de campanhas), que continuam com você.
+  </div>
+
+  <h2>Contato</h2>
+  <p>Digitalizando Negócios — <a href="mailto:iacomjesuss@gmail.com" style="color:var(--accent)">iacomjesuss@gmail.com</a></p>
+</main>
+
+<footer>
+  <a href="/">← Voltar ao app</a>
+</footer>
+
+</body>
+</html>

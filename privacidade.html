@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Política de Privacidade — Digitalizando Negócios</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--border:#2e334d;
+  --accent:#4f7ef8;--accent2:#7c3aed;
+  --text:#e2e8f0;--muted:#94a3b8;
+  --radius:12px;
+}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Segoe UI',system-ui,sans-serif;
+  font-size:16px;line-height:1.75;min-height:100vh;
+}
+header{
+  background:linear-gradient(135deg,#12152b,#1a1d27);
+  border-bottom:1px solid var(--border);
+  padding:18px 24px;
+}
+.brand{
+  max-width:760px;margin:0 auto;
+  display:flex;align-items:center;gap:12px;
+}
+.brand-icon{
+  width:38px;height:38px;border-radius:9px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.brand-name{font-size:15px;font-weight:700;color:#fff}
+.brand-sub{font-size:11px;color:var(--muted)}
+
+main{
+  max-width:760px;margin:0 auto;
+  padding:48px 24px 80px;
+}
+h1{
+  font-size:clamp(22px,5vw,32px);font-weight:800;
+  background:linear-gradient(135deg,#fff 0%,#94a3b8 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:6px;
+}
+.updated{font-size:13px;color:var(--muted);margin-bottom:40px}
+
+h2{
+  font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--muted);margin:36px 0 10px;
+  padding-bottom:8px;border-bottom:1px solid var(--border);
+}
+p{color:var(--text);margin-bottom:12px}
+ul{
+  list-style:none;padding:0;margin-bottom:12px;
+  display:flex;flex-direction:column;gap:6px;
+}
+ul li{
+  padding:10px 14px;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  font-size:15px;color:var(--text);
+  padding-left:30px;position:relative;
+}
+ul li::before{
+  content:'–';position:absolute;left:12px;color:var(--accent);font-weight:700;
+}
+
+footer{
+  border-top:1px solid var(--border);
+  padding:24px;text-align:center;
+}
+footer a{
+  color:var(--accent);text-decoration:none;font-size:14px;font-weight:600;
+}
+footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-icon">📊</div>
+    <div>
+      <div class="brand-name">Digitalizando Negócios</div>
+      <div class="brand-sub">Gestão de Anúncios Meta Ads</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <h1>Política de Privacidade</h1>
+  <p class="updated">Última atualização: 09/06/2026</p>
+
+  <h2>1. Quem somos</h2>
+  <p>Este aplicativo é operado por <strong>Digitalizando Negócios</strong> (nome fantasia), CNPJ 21.741.193/0001-01. Dúvidas sobre privacidade ou seus dados: <a href="mailto:iacomjesuss@gmail.com" style="color:var(--accent)">iacomjesuss@gmail.com</a>.</p>
+
+  <h2>2. O que o aplicativo faz</h2>
+  <p>Ajudamos pequenos e médios empreendedores a criar, acompanhar e otimizar campanhas de anúncios no Meta Ads (Facebook e Instagram) de forma simples. Com a sua autorização, o aplicativo se conecta à sua conta de anúncios do Meta e opera em seu nome.</p>
+
+  <h2>3. Quais dados coletamos</h2>
+  <ul>
+    <li><strong>Dados de cadastro:</strong> seu e-mail e credenciais de acesso, para criar e proteger sua conta no aplicativo.</li>
+    <li><strong>Dados de conexão com o Meta:</strong> identificadores da sua conta de anúncios, da sua página e do seu número de WhatsApp, além da autorização para gerenciarmos seus anúncios.</li>
+    <li><strong>Dados das suas campanhas:</strong> campanhas, conjuntos, anúncios, métricas de desempenho e miniaturas de criativos, acessados pela API oficial do Meta.</li>
+    <li><strong>Mídias que você envia:</strong> imagens e vídeos para os anúncios. Os vídeos passam por armazenamento temporário e são excluídos automaticamente após o processamento.</li>
+  </ul>
+
+  <h2>4. Como usamos seus dados</h2>
+  <p>Exclusivamente para prestar o serviço: criar, publicar, monitorar e otimizar suas campanhas e mostrar os resultados a você. Nenhuma outra finalidade.</p>
+
+  <h2>5. Com quem compartilhamos</h2>
+  <ul>
+    <li>Com o <strong>Meta (Facebook/Instagram)</strong>, para operar seus anúncios na sua conta.</li>
+    <li>Com provedores de infraestrutura que hospedam o app e o banco (<strong>Supabase</strong> e <strong>Vercel</strong>), apenas no necessário para o serviço funcionar.</li>
+    <li>Nunca vendemos seus dados nem os compartilhamos para publicidade de terceiros.</li>
+  </ul>
+
+  <h2>6. Armazenamento e segurança</h2>
+  <p>Credenciais e tokens ficam guardados de forma segura no servidor, nunca expostos no navegador. Cada cliente só enxerga e opera os próprios dados.</p>
+
+  <h2>7. Por quanto tempo guardamos</h2>
+  <p>Mantemos seus dados enquanto a sua conta estiver ativa. As mídias temporárias de vídeo são apagadas logo após o processamento.</p>
+
+  <h2>8. Seus direitos (LGPD)</h2>
+  <p>Você pode solicitar acesso, correção, portabilidade ou exclusão dos seus dados, e revogar a autorização de conexão com o Meta, a qualquer momento, escrevendo para <a href="mailto:iacomjesuss@gmail.com" style="color:var(--accent)">iacomjesuss@gmail.com</a>.</p>
+
+  <h2>9. Sobre os dados que ficam no Meta</h2>
+  <p>Excluir seus dados conosco não apaga o que o Meta guarda na sua conta de anúncios e na sua página, que continuam sendo suas e são geridas pelas ferramentas do próprio Meta.</p>
+
+  <h2>10. Alterações nesta política</h2>
+  <p>Podemos atualizar esta política; quando isso acontecer, mudamos a data no topo.</p>
+
+  <h2>11. Contato</h2>
+  <p>Digitalizando Negócios — CNPJ 21.741.193/0001-01 — <a href="mailto:iacomjesuss@gmail.com" style="color:var(--accent)">iacomjesuss@gmail.com</a></p>
+</main>
+
+<footer>
+  <a href="/">← Voltar ao app</a>
+</footer>
+
+</body>
+</html>
