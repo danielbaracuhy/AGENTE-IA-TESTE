@@ -21,7 +21,7 @@ proposto e REJEITADO por resolver um problema que não era o observado).
 - Deploy: editar → git add/commit → git push origin master → a Vercel publica sozinha.
 - NÃO confundir com a pasta "AGENTE ANALISE ADS".
 - A raiz serve `index.html`.
-- HEAD atual em master: `bf39693` (limpeza: remove codigo morto do analisador CSV).
+- HEAD atual em master: `8699387` (feat: paginas de privacidade e exclusao de dados).
 
 ## Stack
 HTML/CSS/JS puro (sem bundler), ESM via CDN; serverless Vercel (Node 18+, fetch nativo);
@@ -145,7 +145,11 @@ thumbnails + daily/lifetime budget. campanha-acao usa activateAdset (start_time 
 1. ~~Limpeza concluída (09/06): código morto CSV removido (commit bf39693);
    url.parse() já estava substituído por new URL() em commit anterior.~~
 2. Onboarding por cliente; papel admin/agência; coluna whatsapp no meta_config.
-3. Meta App Review + Business Verification (Advanced Access ads_management).
+3. Meta App Review + Business Verification — EM ANDAMENTO (09/06):
+   ✅ Business Verification enviada (aguardando aprovação do Meta)
+   ✅ privacidade.html publicada (agente-ia-teste-roan.vercel.app/privacidade.html)
+   ✅ exclusao-dados.html publicada (agente-ia-teste-roan.vercel.app/exclusao-dados.html)
+   ⏳ Falta: conta de teste, screencast do fluxo, justificativa por permissão, submissão.
 4. Relatório semanal consolidado.
 5. Próximos agentes: atendimento/vendas WhatsApp; follow-up de quem não comprou.
 (Opcional, só se aparecer: contador de geração no carregarCampanhas pra blindar contra um fetch em
@@ -185,3 +189,7 @@ piscar de "Em análise" pra "Pausada" sozinho.)
 - DEP0169 (url.parse): já estava corrigido antes do resumo registrar — grep confirmou new URL()
   nos dois únicos endpoints que leem query params (insights-campanhas, insights-anuncios). Ao
   registrar pendências técnicas, verificar no código antes de assumir que ainda existe.
+- App Review do Meta: Business Verification (CNPJ) é só um portão de confiança — não dá acesso a
+  contas de clientes sozinho. O que libera operar em produção é o Advanced Access ao
+  ads_management, via App Review separado. Páginas de privacidade e exclusão de dados são
+  pré-requisitos obrigatórios.
