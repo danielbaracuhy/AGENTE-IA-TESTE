@@ -63,12 +63,13 @@ export default async function handler(req, res) {
     const cfg = DESTINOS[destino];
     if (!cfg) throw new Error("Destino inválido. Use: whatsapp ou site.");
     if (destino === "site" && !link) throw new Error("Para destino Site, informe o link.");
-    if (destino === "whatsapp" && !process.env.META_WHATSAPP_NUMBER)
+    const { adAccountId: ACT, pageId: PAGE_ID, whatsapp: waNumber } = await getMetaConfig(req);
+    const whatsappNumber = waNumber || process.env.META_WHATSAPP_NUMBER;
+    if (destino === "whatsapp" && !whatsappNumber)
       throw new Error("META_WHATSAPP_NUMBER não configurado no servidor.");
 
-    const { adAccountId: ACT, pageId: PAGE_ID } = await getMetaConfig(req);
     const reaisEmCentavos = Math.round(Number(orcamentoDiario) * 100);
-    const waLink = `https://wa.me/${process.env.META_WHATSAPP_NUMBER}`;
+    const waLink = `https://wa.me/${whatsappNumber}`;
 
     // Build criativos list — new format or fallback to legacy single-creative fields
     const criativos = (creativosRaw && creativosRaw.length)
