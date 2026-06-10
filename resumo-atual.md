@@ -21,7 +21,7 @@ proposto e REJEITADO por resolver um problema que não era o observado).
 - Deploy: editar → git add/commit → git push origin master → a Vercel publica sozinha.
 - NÃO confundir com a pasta "AGENTE ANALISE ADS".
 - A raiz serve `index.html`.
-- HEAD atual em master: `b38ce5b` (refactor: consolida endpoints admin em api/admin.js).
+- HEAD atual em master: `6128a27` (feat: saldo pré-pago Meta no topo de Minhas Campanhas).
 
 ## Stack
 HTML/CSS/JS puro (sem bundler), ESM via CDN; serverless Vercel (Node 18+, fetch nativo);
@@ -99,6 +99,11 @@ Passos 1–3 concluídos: Auth (login/senha, overlay, sessão persistente), gati
 cria clientes (trial/cliente), getMetaConfig (Bearer → user.id → clientes.id → meta_config) com
 fallback env. config.js na raiz (público, publishable key). Secret rotacionada. VALIDADO.
 
+### 6. SALDO PRÉ-PAGO META — VALIDADO (10/06)
+Exibido no topo de Minhas Campanhas. Buscado em paralelo com campanhas via Promise.allSettled
+(fail-silent). Só aparece para contas pré-pagas (is_prepay_account=true). Campo saldo:{valor,moeda}
+incluído no response de listar-campanhas.
+
 ### Ciclo completo do gestor (funcionando)
 criar (imagem+vídeo) → analisar → comparar criativos → excluir o perdedor → escalar o campeão; a
 lista se atualiza sozinha enquanto há campanha em análise; contas suspensas são barradas na escrita.
@@ -150,6 +155,7 @@ thumbnails + daily/lifetime budget. campanha-acao usa activateAdset (start_time 
    config Meta por cliente; endpoints consolidados em api/admin.js (limite Vercel Hobby).
    Commits eb760e6→b38ce5b.~~
    2c pendente: onboarding por cliente.
+- LEVA UI pendente: reorganizar tela inicial (Criar Campanha como botão principal; auto-load de campanhas sem botão Carregar; correção mobile).
 3. Meta App Review + Business Verification — EM ANDAMENTO (09/06):
    ✅ Business Verification enviada (aguardando aprovação do Meta)
    ✅ privacidade.html publicada (agente-ia-teste-roan.vercel.app/privacidade.html)
