@@ -1,3 +1,4 @@
+import { verificarOwnership } from '../lib/verificar-ownership.js';
 export const config = { maxDuration: 30 };
 const GRAPH = "v25.0";
 const DEFAULT_PRESET = "last_14d";
@@ -26,6 +27,10 @@ export default async function handler(req,res){
     const q=getQuery(req);
     const campaignId=(q.campaign_id||"").trim();
     if(!campaignId) return res.status(400).json({error:"campaign_id é obrigatório."});
+
+    const own = await verificarOwnership(req, campaignId);
+    if (!own.permitido) return res.status(403).json({ error: own.motivo });
+
     let dateParam;
     if(q.since&&q.until) dateParam=`time_range=${encodeURIComponent(JSON.stringify({since:q.since,until:q.until}))}`;
     else { const p=ALLOWED_PRESETS.has(q.preset)?q.preset:DEFAULT_PRESET; dateParam=`date_preset=${p}`; }

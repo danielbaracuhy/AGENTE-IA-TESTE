@@ -1,4 +1,5 @@
 import { verificarStatus } from '../lib/verificar-status.js';
+import { verificarOwnership } from '../lib/verificar-ownership.js';
 const API_VERSION = "v25.0";
 const GRAPH = `https://graph.facebook.com/${API_VERSION}`;
 
@@ -59,6 +60,9 @@ export default async function handler(req, res) {
   console.log('[verificar-status] fonte:', st.fonte, 'status:', st.status);
   const { campaignId, acao } = req.body || {};
   if (!campaignId || !acao) return res.status(400).json({ erro: 'campaignId e acao são obrigatórios.' });
+
+  const own = await verificarOwnership(req, campaignId);
+  if (!own.permitido) return res.status(403).json({ erro: own.motivo });
 
   const token = process.env.META_ACCESS_TOKEN;
 

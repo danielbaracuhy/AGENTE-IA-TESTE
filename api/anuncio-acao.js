@@ -1,4 +1,5 @@
 import { verificarStatus } from '../lib/verificar-status.js';
+import { verificarOwnership } from '../lib/verificar-ownership.js';
 export const config = { maxDuration: 30 };
 const GRAPH = "v25.0";
 export default async function handler(req,res){
@@ -12,6 +13,10 @@ export default async function handler(req,res){
     let body=req.body; if(typeof body==="string"){try{body=JSON.parse(body)}catch{body={}}} body=body||{};
     const adId=(body.ad_id||"").trim();
     if(!adId) return res.status(400).json({error:"ad_id é obrigatório."});
+
+    const own = await verificarOwnership(req, adId);
+    if (!own.permitido) return res.status(403).json({ error: own.motivo });
+
     const qs=new URLSearchParams({ access_token: token });
     const r=await fetch(`https://graph.facebook.com/${GRAPH}/${adId}?${qs}`,{ method:"DELETE" });
     const data=await r.json();

@@ -1,5 +1,6 @@
 // api/escalar-campanha.js
 import { verificarStatus } from '../lib/verificar-status.js';
+import { verificarOwnership } from '../lib/verificar-ownership.js';
 export const config = { maxDuration: 30 };
 const GRAPH = "v25.0"; // igualar a listar-campanhas.js
 
@@ -33,6 +34,9 @@ export default async function handler(req, res){
     const valorReais = body.valor != null ? num(body.valor) : null; // ex: 60 (R$)
     if (!campaignId) return res.status(400).json({ error:"campaign_id é obrigatório." });
     if (pct == null && valorReais == null) return res.status(400).json({ error:"Informe pct ou valor." });
+
+    const own = await verificarOwnership(req, campaignId);
+    if (!own.permitido) return res.status(403).json({ error: own.motivo });
 
     // 1) Detectar onde está o orçamento: campanha (CBO/Advantage) ou conjunto (ABO)
     const camp = await fbGet(`${campaignId}?fields=name,daily_budget,lifetime_budget`, token);
