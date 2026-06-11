@@ -293,8 +293,8 @@ tr:hover td{background:var(--surface2)}
   <h1 class="up-title">Analisador de Campanhas <span>Meta Ads</span></h1>
   <p class="up-sub">Acompanhe o desempenho das suas campanhas em tempo real.</p>
 
-  <button class="btn-analyze" id="btn-analyze" onclick="analyzeFromAPI()">
-    <span>🔍</span> Analisar em tempo real
+  <button class="btn-analyze" id="btn-analyze" onclick="abrirModalCampanha()">
+    <span>➕</span> Criar Campanha
   </button>
 
   <div class="up-features">
@@ -303,7 +303,7 @@ tr:hover td{background:var(--surface2)}
     <div class="feat">📥 Exporta PDF</div>
     <div class="feat">📊 Gráficos interativos</div>
   </div>
-  <button class="btn btn-primary" style="margin-top:8px" onclick="abrirModalCampanha()">➕ Criar Campanha</button>
+  <button class="btn btn-ghost" style="margin-top:8px" onclick="analyzeFromAPI()">🔍 Analisar em tempo real</button>
 
   <div id="sec-campanhas" style="width:100%;max-width:520px;margin-top:12px">
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px">
