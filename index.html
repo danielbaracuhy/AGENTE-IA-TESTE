@@ -304,6 +304,7 @@ tr:hover td{background:var(--surface2)}
     <div class="feat">📊 Gráficos interativos</div>
   </div>
   <button class="btn btn-ghost" style="margin-top:8px" onclick="analyzeFromAPI()">🔍 Analisar em tempo real</button>
+  <button class="btn btn-ghost" style="margin-top:4px" onclick="relatorioSemanal()">📄 Relatório Semanal</button>
 
   <div id="sec-campanhas" style="width:100%;max-width:520px;margin-top:12px">
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px">
@@ -859,6 +860,155 @@ function exportPDF() {
   }
 
   doc.save(`relatorio-meta-ads-${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// ── RELATÓRIO SEMANAL ─────────────────────────────────────
+async function relatorioSemanal() {
+  try {
+    var _ses = (await supabase.auth.getSession()).data.session;
+    var hdrs = _ses ? {'Authorization': 'Bearer ' + _ses.access_token} : {};
+
+    var hoje = new Date();
+    var fim = hoje.toISOString().slice(0, 10);
+    var inicioD = new Date(hoje); inicioD.setDate(inicioD.getDate() - 7);
+    var inicio = inicioD.toISOString().slice(0, 10);
+    var fmtBR = function(iso) { var p = iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
+
+    var [insSettled, listaSettled] = await Promise.allSettled([
+      fetch('/api/insights-campanhas?preset=last_7d', {headers: hdrs}),
+      fetch('/api/listar-campanhas', {headers: hdrs}),
+    ]);
+
+    var campanhasIns = [];
+    var statusMap = {};
+
+    if (insSettled.status === 'fulfilled') {
+      var insJson = await insSettled.value.json();
+      if (insSettled.value.ok && Array.isArray(insJson.campanhas)) campanhasIns = insJson.campanhas;
+    }
+    if (listaSettled.status === 'fulfilled') {
+      var listaJson = await listaSettled.value.json();
+      if (listaSettled.value.ok && Array.isArray(listaJson.campanhas))
+        listaJson.campanhas.forEach(function(c) { statusMap[c.id] = c; });
+    }
+
+    // Ad insights: one call per campaign with spend > 0
+    var comGasto = campanhasIns.filter(function(c) { return c.investido > 0 && c._campaignId; });
+    var adResults = comGasto.length ? await Promise.allSettled(
+      comGasto.map(function(c) {
+        return fetch('/api/insights-anuncios?campaign_id=' + encodeURIComponent(c._campaignId) + '&preset=last_7d', {headers: hdrs})
+          .then(function(r) { return r.json().then(function(d) { return {campId: c._campaignId, d: d}; }); });
+      })
+    ) : [];
+
+    var todosAnuncios = [];
+    adResults.forEach(function(r) {
+      if (r.status === 'fulfilled' && r.value.d && Array.isArray(r.value.d.anuncios))
+        todosAnuncios = todosAnuncios.concat(r.value.d.anuncios);
+    });
+
+    // Best creative: lowest CPP with at least 1 conversion; fallback: lowest CPC
+    var melhor = null;
+    var comConv = todosAnuncios.filter(function(a) { return a.conversoes > 0 && a.cpp > 0; });
+    if (comConv.length) {
+      melhor = comConv.reduce(function(b, a) { return a.cpp < b.cpp ? a : b; });
+      melhor._modoCPP = true;
+    } else {
+      var comClique = todosAnuncios.filter(function(a) { return a.cliques > 0 && a.investido > 0; });
+      if (comClique.length) {
+        var ranked = comClique.map(function(a) { return Object.assign({}, a, {_cpc: a.investido / a.cliques}); });
+        melhor = ranked.reduce(function(b, a) { return a._cpc < b._cpc ? a : b; });
+        melhor._modoCPC = true;
+      }
+    }
+
+    var totalGasto = campanhasIns.reduce(function(s, c) { return s + c.investido; }, 0);
+    var totalConv  = campanhasIns.reduce(function(s, c) { return s + c.conversoes; }, 0);
+    var labelConv  = ((campanhasIns.find(function(c) { return c.rotuloSub; }) || {}).rotuloSub) || 'conversao';
+
+    var {jsPDF} = window.jspdf;
+    var doc = new jsPDF({orientation: 'portrait', unit: 'mm', format: 'a4'});
+    var W = 210, y = 0;
+
+    // Header
+    doc.setFillColor(20, 60, 120); doc.rect(0, 0, W, 28, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+    doc.text('RELATORIO SEMANAL - META ADS', 14, 12);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    doc.text('Digitalizando Negocios  |  Ultimos 7 dias', 14, 19);
+    doc.text(fmtBR(inicio) + ' a ' + fmtBR(fim), W - 14, 19, {align: 'right'});
+    y = 36;
+
+    // Summary
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(20, 60, 120);
+    doc.text('RESUMO DA SEMANA', 14, y); y += 3;
+    doc.autoTable({
+      startY: y,
+      head: [['Metrica', 'Valor']],
+      body: [
+        ['Total investido no periodo', 'R$ ' + totalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})],
+        ['Total de ' + labelConv + 's', totalConv.toLocaleString('pt-BR', {maximumFractionDigits: 0})],
+        ['Campanhas com atividade', campanhasIns.length.toString()],
+      ],
+      theme: 'grid',
+      headStyles: {fillColor: [20, 60, 120], textColor: 255, fontSize: 8, fontStyle: 'bold'},
+      bodyStyles: {fontSize: 9},
+      columnStyles: {0: {fontStyle: 'bold', cellWidth: 110}},
+      alternateRowStyles: {fillColor: [245, 247, 255]},
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // Campaign table
+    if (y > 200) { doc.addPage(); y = 20; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(20, 60, 120);
+    doc.text('RESULTADO POR CAMPANHA', 14, y); y += 3;
+    doc.autoTable({
+      startY: y,
+      head: [['Campanha', 'Status', 'Investido', labelConv + 's', 'Custo por result.']],
+      body: campanhasIns.length ? campanhasIns.map(function(c) {
+        var camp = statusMap[c._campaignId];
+        var st = camp ? estadoDaCampanha(camp).rotulo : (c.status || '—');
+        return [
+          c.nome.slice(0, 34),
+          st,
+          'R$ ' + c.investido.toLocaleString('pt-BR', {minimumFractionDigits: 2}),
+          c.conversoes.toLocaleString('pt-BR', {maximumFractionDigits: 0}),
+          c.cpp > 0 ? 'R$ ' + c.cpp.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '—',
+        ];
+      }) : [['Nenhuma campanha com atividade no periodo', '', '', '', '']],
+      theme: 'grid',
+      headStyles: {fillColor: [20, 60, 120], textColor: 255, fontSize: 8, fontStyle: 'bold'},
+      bodyStyles: {fontSize: 8},
+      alternateRowStyles: {fillColor: [245, 247, 255]},
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // Best creative
+    if (melhor) {
+      if (y > 250) { doc.addPage(); y = 20; }
+      doc.setFillColor(230, 245, 235); doc.rect(12, y - 3, W - 24, 14, 'F');
+      doc.setTextColor(20, 100, 40); doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+      var labelMelhor = melhor._modoCPP
+        ? 'Melhor criativo da semana (menor custo por ' + labelConv + '): '
+        : 'Melhor criativo da semana (menor custo por clique): ';
+      doc.text((labelMelhor + melhor.nome).slice(0, 95), 15, y + 4);
+      y += 17;
+    }
+
+    // Footer on all pages
+    var pg = doc.getNumberOfPages();
+    for (var i = 1; i <= pg; i++) {
+      doc.setPage(i);
+      doc.setFillColor(20, 60, 120); doc.rect(0, 288, W, 9, 'F');
+      doc.setTextColor(200, 210, 255); doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+      doc.text('Pagina ' + i + ' de ' + pg + '  |  Gerado por Digitalizando Negocios em ' + fmtBR(fim), W / 2, 293.5, {align: 'center'});
+    }
+
+    doc.save('relatorio-semanal-' + fim + '.pdf');
+  } catch(e) {
+    alert('Nao foi possivel gerar o relatorio. Tente novamente.');
+    console.error('[relatorioSemanal]', e);
+  }
 }
 
 // ═══════════════════════════════════════════════════════
