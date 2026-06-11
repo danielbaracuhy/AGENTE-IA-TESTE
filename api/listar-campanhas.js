@@ -35,7 +35,10 @@ function agregateAds(ads) {
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ erro: 'Use GET' });
   try {
-    const { adAccountId: ACT } = await getMetaConfig(req);
+    const { adAccountId: ACT, fonte } = await getMetaConfig(req);
+    if (fonte === 'env-com-bearer') {
+      return res.status(403).json({ erro: 'Conta não configurada. Solicite à agência a configuração da sua conta.' });
+    }
     const qs = new URLSearchParams({
       fields: 'name,status,effective_status,daily_budget,lifetime_budget,adsets.limit(20){daily_budget,lifetime_budget},ads.limit(10){effective_status,ad_review_feedback,creative{thumbnail_url,image_url}}',
       limit: '100',

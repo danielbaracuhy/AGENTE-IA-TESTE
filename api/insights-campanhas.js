@@ -51,7 +51,10 @@ export default async function handler(req,res){
       "inline_link_clicks","inline_link_click_ctr","cost_per_inline_link_click","cpm","actions",
       "date_start","date_stop"].join(",");
 
-    const { adAccountId: accountId } = await getMetaConfig(req);
+    const { adAccountId: accountId, fonte } = await getMetaConfig(req);
+    if (fonte === 'env-com-bearer') {
+      return res.status(403).json({ erro: 'Conta não configurada. Solicite à agência a configuração da sua conta.' });
+    }
     const insightsUrl=`https://graph.facebook.com/${GRAPH}/${accountId}/insights`+
       `?level=campaign&${dateParam}&fields=${fields}&limit=500&access_token=${encodeURIComponent(token)}`;
     const statusUrl=`https://graph.facebook.com/${GRAPH}/${accountId}/campaigns`+

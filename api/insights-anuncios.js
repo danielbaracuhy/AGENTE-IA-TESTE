@@ -1,3 +1,4 @@
+import { getMetaConfig } from '../lib/meta-config.js';
 import { verificarOwnership } from '../lib/verificar-ownership.js';
 export const config = { maxDuration: 30 };
 const GRAPH = "v25.0";
@@ -27,6 +28,11 @@ export default async function handler(req,res){
     const q=getQuery(req);
     const campaignId=(q.campaign_id||"").trim();
     if(!campaignId) return res.status(400).json({error:"campaign_id é obrigatório."});
+
+    const { fonte } = await getMetaConfig(req);
+    if (fonte === 'env-com-bearer') {
+      return res.status(403).json({ erro: 'Conta não configurada. Solicite à agência a configuração da sua conta.' });
+    }
 
     const own = await verificarOwnership(req, campaignId);
     if (!own.permitido) return res.status(403).json({ error: own.motivo });
