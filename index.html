@@ -287,22 +287,32 @@ tr:hover td{background:var(--surface2)}
 </head>
 <body>
 
+<header class="dash-header">
+  <div class="dash-header-inner">
+    <div class="dash-brand">
+      <div class="brand-icon">📊</div>
+      <div>
+        <p class="brand-title">Meta Ads Analytics</p>
+        <p class="brand-sub" id="ds-filename">—</p>
+        <p id="ds-contexto" style="font-size:9px;color:var(--muted);margin-top:1px;display:none;"></p>
+      </div>
+    </div>
+    <div class="dash-actions">
+      <button class="btn btn-ghost" id="btn-new">↩ Nova Análise</button>
+      <button class="btn btn-primary" onclick="abrirModalCampanha()">➕ Criar Campanha</button>
+      <button class="btn btn-primary" id="btn-pdf">⬇ Exportar PDF</button>
+      <button class="btn btn-ghost" id="btn-sair" onclick="authSignOut()" style="display:none">⎋ Sair</button>
+      <span id="user-info"></span>
+    </div>
+  </div>
+</header>
+
 <!-- ═══ SCREEN 1: UPLOAD ══════════════════════════════ -->
 <div id="screen-upload">
-  <div class="up-logo">📊</div>
-  <h1 class="up-title">Analisador de Campanhas <span>Meta Ads</span></h1>
-  <p class="up-sub">Acompanhe o desempenho das suas campanhas em tempo real.</p>
-
   <button class="btn-analyze" id="btn-analyze" onclick="abrirModalCampanha()">
     <span>➕</span> Criar Campanha
   </button>
 
-  <div class="up-features">
-    <div class="feat">⏱ Tempo real</div>
-    <div class="feat">⚡ Análise instantânea</div>
-    <div class="feat">📥 Exporta PDF</div>
-    <div class="feat">📊 Gráficos interativos</div>
-  </div>
   <button class="btn btn-ghost" style="margin-top:8px" onclick="analyzeFromAPI()">🔍 Analisar em tempo real</button>
   <button class="btn btn-ghost" style="margin-top:4px" onclick="relatorioSemanal()">📄 Relatório Semanal</button>
 
@@ -335,26 +345,6 @@ tr:hover td{background:var(--surface2)}
 
 <!-- ═══ SCREEN 3: DASHBOARD ═══════════════════════════ -->
 <div id="screen-dashboard" style="display:none">
-  <header class="dash-header">
-    <div class="dash-header-inner">
-      <div class="dash-brand">
-        <div class="brand-icon">📊</div>
-        <div>
-          <p class="brand-title">Meta Ads Analytics</p>
-          <p class="brand-sub" id="ds-filename">—</p>
-          <p id="ds-contexto" style="font-size:9px;color:var(--muted);margin-top:1px;display:none;"></p>
-        </div>
-      </div>
-      <div class="dash-actions">
-        <button class="btn btn-ghost" id="btn-new">↩ Nova Análise</button>
-        <button class="btn btn-primary" onclick="abrirModalCampanha()">➕ Criar Campanha</button>
-        <button class="btn btn-primary" id="btn-pdf">⬇ Exportar PDF</button>
-        <button class="btn btn-ghost" id="btn-sair" onclick="authSignOut()" style="display:none">⎋ Sair</button>
-        <span id="user-info"></span>
-      </div>
-    </div>
-  </header>
-
   <div class="dash-body">
     <div class="dash-meta" id="ds-meta"></div>
 
