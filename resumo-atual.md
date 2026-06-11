@@ -1,4 +1,4 @@
-# Resumo do Projeto — AGENTE-IA-TESTE (atualizado 09/06/2026)
+# Resumo do Projeto — AGENTE-IA-TESTE (atualizado 11/06/2026)
 
 ## Visão geral
 App de gestão de tráfego com IA para PMEs (marca: Digitalizando Negócios). Cria campanhas no
@@ -21,7 +21,7 @@ proposto e REJEITADO por resolver um problema que não era o observado).
 - Deploy: editar → git add/commit → git push origin master → a Vercel publica sozinha.
 - NÃO confundir com a pasta "AGENTE ANALISE ADS".
 - A raiz serve `index.html`.
-- HEAD atual em master: `6128a27` (feat: saldo pré-pago Meta no topo de Minhas Campanhas).
+- HEAD atual em master: `9058581` (ui: remover Nova Análise; botões Analisar e Relatório no estilo destaque).
 
 ## Stack
 HTML/CSS/JS puro (sem bundler), ESM via CDN; serverless Vercel (Node 18+, fetch nativo);
@@ -104,6 +104,47 @@ Exibido no topo de Minhas Campanhas. Buscado em paralelo com campanhas via Promi
 (fail-silent). Só aparece para contas pré-pagas (is_prepay_account=true). Campo saldo:{valor,moeda}
 incluído no response de listar-campanhas.
 
+### 7. LEVA UI — VALIDADO (11/06)
+Auto-load de campanhas no showApp() (sem botão Carregar). Criar Campanha como
+botão principal. Header global (dash-header movido para fora dos screens, antes
+de screen-upload) com Sair + email do usuário visível em todas as telas. Logo
+do header (dash-brand) virou o "voltar para home" (handler do antigo btn-new:
+destroyCharts + S.data=null + screen('screen-upload')). Botões Criar Campanha,
+Analisar e Relatório Semanal no estilo btn-analyze (azul destaque). Hero antigo
+removido do screen-upload.
+
+### 8. RELATÓRIO SEMANAL — VALIDADO (11/06)
+Botão que gera PDF dos últimos 7 dias (todas as campanhas com atividade, ativas
+ou pausadas). Função relatorioSemanal() no frontend, reusa insights-campanhas
+?preset=last_7d + insights-anuncios por campanha (Promise.all) + listar-campanhas.
+jsPDF + autotable. Inclui melhor criativo da semana (menor custo/conversão).
+Não criou endpoint novo.
+
+### 9. SEGURANÇA MULTI-TENANT — VALIDADO (11/06) [CRÍTICO]
+Corrigida vulnerabilidade onde cliente A podia agir em campanha do cliente B
+(endpoints por ID aceitavam qualquer ID com token global da agência).
+- lib/verificar-ownership.js (RAIZ, fail-closed): resolve adAccountId via
+  getMetaConfig(req), busca account_id do objeto na Graph API, normaliza prefixo
+  act_, compara. Diverge ou erro de infra → 403. Aplicado em campanha-acao,
+  escalar-campanha, anuncio-acao, insights-anuncios.
+- getMetaConfig agora retorna campo `fonte`: 'db' | 'env' | 'env-com-bearer'.
+  env-com-bearer = cliente autenticado SEM meta_config no banco (caía no fallback
+  da agência). Bloqueado com 403 tanto na escrita (verificar-ownership) quanto na
+  leitura (listar-campanhas, insights-campanhas, insights-anuncios).
+- Resultado: cliente sem meta_config próprio não vê nem opera nada. Cliente com
+  meta_config no banco isola corretamente. Modo agência (sem Bearer) preservado.
+
+### 10. PAINEL ADMIN — email do usuário (11/06)
+admin.js GET busca email via Admin API do Supabase (auth/v1/admin/users/{id})
+em paralelo (Promise.all, fail-silent). admin.html exibe nome_empresa || email || '—'.
+
+### FIX CRÍTICO — vercel.json (11/06)
+O catch-all do vercel.json da RAIZ apontava para CAMPANHAS/index.html (versão
+antiga de 29/mai, sem as correções). Qualquer rota fora de "/" servia o frontend
+errado. Corrigido para /index.html. ATENÇÃO: os endpoints api/ só existem na raiz
+(as correções de segurança SEMPRE rodaram corretamente); o bug era só de frontend.
+A pasta CAMPANHAS/ é artefato antigo — avaliar remoção.
+
 ### Ciclo completo do gestor (funcionando)
 criar (imagem+vídeo) → analisar → comparar criativos → excluir o perdedor → escalar o campeão; a
 lista se atualiza sozinha enquanto há campanha em análise; contas suspensas são barradas na escrita.
@@ -147,25 +188,13 @@ listar-campanhas traz: status configurado + effective_status agregado + motivo_r
 thumbnails + daily/lifetime budget. campanha-acao usa activateAdset (start_time best-effort).
 
 ## PENDÊNCIAS / PRÓXIMOS (em ordem)
-1. ~~Limpeza concluída (09/06): código morto CSV removido (commit bf39693);
-   url.parse() já estava substituído por new URL() em commit anterior.~~
-2. ~~2a concluída (10/06): coluna whatsapp em meta_config; getMetaConfig expõe whatsapp;
-   criar-campanha usa número do cliente com fallback env (commits b7a4937, 5a8a9c9).~~
-   ~~2b concluída (10/06): painel admin em /admin.html — lista clientes, ativar/suspender,
-   config Meta por cliente; endpoints consolidados em api/admin.js (limite Vercel Hobby).
-   Commits eb760e6→b38ce5b.~~
-   2c pendente: onboarding por cliente.
-- LEVA UI pendente: reorganizar tela inicial (Criar Campanha como botão principal; auto-load de campanhas sem botão Carregar; correção mobile).
-3. Meta App Review + Business Verification — EM ANDAMENTO (09/06):
-   ✅ Business Verification enviada (aguardando aprovação do Meta)
-   ✅ privacidade.html publicada (agente-ia-teste-roan.vercel.app/privacidade.html)
-   ✅ exclusao-dados.html publicada (agente-ia-teste-roan.vercel.app/exclusao-dados.html)
-   ⏳ Falta: conta de teste, screencast do fluxo, justificativa por permissão, submissão.
-4. Relatório semanal consolidado.
-5. Próximos agentes: atendimento/vendas WhatsApp; follow-up de quem não comprou.
-(Opcional, só se aparecer: contador de geração no carregarCampanhas pra blindar contra um fetch em
-andamento sobrescrever o update otimista — NÃO é problema observado; aplicar só se algum dia o card
-piscar de "Em análise" pra "Pausada" sozinho.)
+- Remover/avaliar botão "Exportar PDF" do header (sobrou após a reorganização)
+- Deletar 2 registros de teste em meta_config (Supabase) apontando para a conta
+  da agência (act_908604161717895)
+- Configurar contas Meta reais dos clientes de teste via /admin.html
+- Definir nome novo do produto (ideias: Meta Gestor, Gestor Meta)
+- Avaliar remoção da pasta CAMPANHAS/ (artefato antigo, 29/mai)
+- Meta App Review: aguardando retorno da Business Verification
 
 ## APRENDIZADOS / GOTCHAS
 - Auto-refresh = setTimeout (one-shot), não setInterval. O ciclo só se renova porque
