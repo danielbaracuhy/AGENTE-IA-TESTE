@@ -44,7 +44,7 @@ export default async function handler(req, res) {
 
     // GET sem action → listar clientes
     try {
-      const fields = 'id,nome_empresa,status,role,created_at,'
+      const fields = 'id,auth_user_id,nome_empresa,status,role,created_at,'
         + 'meta_config(meta_ad_account_id,meta_page_id,meta_business_id,whatsapp,ativo)';
       const r = await fetch(
         `${SUPABASE_URL}/rest/v1/clientes?select=${encodeURIComponent(fields)}&order=created_at.asc`,
@@ -55,6 +55,19 @@ export default async function handler(req, res) {
       const clientes = rows.map(({ meta_config, ...c }) => ({
         ...c,
         meta_config: meta_config?.[0] ?? null,
+      }));
+      await Promise.all(clientes.map(async (c) => {
+        if (!c.auth_user_id) return;
+        try {
+          const ur = await fetch(
+            `${SUPABASE_URL}/auth/v1/admin/users/${c.auth_user_id}`,
+            { headers: { Authorization: `Bearer ${SUPABASE_SECRET}`, apikey: SUPABASE_SECRET } }
+          );
+          const u = await ur.json();
+          c.email = u.email || null;
+        } catch (_) {
+          c.email = null;
+        }
       }));
       return res.status(200).json(clientes);
     } catch (e) {

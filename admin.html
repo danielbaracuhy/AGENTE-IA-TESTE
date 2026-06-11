@@ -198,7 +198,7 @@ function renderClientes(clientes) {
     const nomeEnc = encodeURIComponent(c.nome_empresa || '');
     return `
       <tr data-id="${c.id}" data-nome="${nomeEnc}">
-        <td>${c.nome_empresa || '—'}</td>
+        <td>${c.nome_empresa || c.email || '—'}</td>
         <td class="td-badge">${badgeHtml(c.status)}</td>
         <td style="color:var(--muted);font-size:11px">${fmtData(c.created_at)}</td>
         <td><div class="act-cell">${acoesHtml(c.id, nomeEnc, c.status)}</div></td>
