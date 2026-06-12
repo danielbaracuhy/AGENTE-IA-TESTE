@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Analisador de Campanhas Meta Ads</title>
+<title>VendeMais Ads</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
@@ -290,10 +290,9 @@ tr:hover td{background:var(--surface2)}
 <header class="dash-header">
   <div class="dash-header-inner">
     <div class="dash-brand">
-      <div class="brand-icon">📊</div>
+      <img src="assets/logo-vendemais.png" alt="VendeMais Ads" style="height:44px;width:auto;">
       <div>
-        <p class="brand-title">Meta Ads Analytics</p>
-        <p class="brand-sub" id="ds-filename">—</p>
+        <p class="brand-sub" id="ds-filename" style="display:none"></p>
         <p id="ds-contexto" style="font-size:9px;color:var(--muted);margin-top:1px;display:none;"></p>
       </div>
     </div>
@@ -413,7 +412,7 @@ tr:hover td{background:var(--surface2)}
   </div>
 
   <footer class="dash-footer">
-    <p>Desenvolvido por <strong>Digitalizando Negócios</strong> · Meta Ads Analytics v2.0</p>
+    <p>Desenvolvido por <strong>Digitalizando Negócios</strong> · VendeMais Ads</p>
     <p id="ds-gen-time">—</p>
   </footer>
 </div>
@@ -1579,9 +1578,9 @@ function escalarCampanhaValor(){
 <!-- ═══ AUTH OVERLAY ════════════════════════════════════ -->
 <div id="auth-overlay">
   <div class="auth-box">
-    <div class="auth-logo">📊</div>
+    <div class="auth-logo"><img src="assets/logo-vendemais.png" alt="VendeMais Ads" style="height:56px;width:auto;"></div>
     <div>
-      <p class="auth-title">Meta Ads Analytics</p>
+      <p class="auth-title">VendeMais Ads</p>
       <p class="auth-sub-txt" id="auth-sub">Faça login para continuar</p>
     </div>
     <div class="auth-field">
