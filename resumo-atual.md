@@ -1,9 +1,9 @@
-# Resumo do Projeto — AGENTE-IA-TESTE (atualizado 11/06/2026)
+# Resumo do Projeto — AGENTE-IA-TESTE (atualizado 12/06/2026)
 
 ## Visão geral
-App de gestão de tráfego com IA para PMEs (marca: Digitalizando Negócios). Cria campanhas no
-Meta Ads, acompanha ao vivo, escala e analisa criativos. Objetivo: vender pra várias empresas.
-Caso de teste: infoproduto próprio (óleo de fritura usado — Hotmart, R$597).
+App de gestão de tráfego com IA para PMEs — marca: **VendeMais Ads** (ex "Digitalizando Negócios").
+Cria campanhas no Meta Ads, acompanha ao vivo, escala e analisa criativos. Objetivo: vender pra
+várias empresas. Caso de teste: infoproduto próprio (óleo de fritura usado — Hotmart, R$597).
 
 ## Modo de trabalho
 Claude Code ("Cláudio") = EXECUTOR; Daniel e Claude = PENSADORES. Daniel decide o rumo, Claude
@@ -11,8 +11,7 @@ desenha, e todo pedido de execução sai como prompt pronto pra colar — nunca 
 Uma mudança por vez, revisar diff antes do commit, nunca auto-commitar sem aprovação. Direto, sem
 bajulação. Daniel se comunica muito por screenshots.
 DISCIPLINA (reforçada nesta sessão): diagnosticar antes de corrigir; quando o executor propõe um
-fix, conferir se ele bate com o SINTOMA real antes de aplicar (um fix de "contador de geração" foi
-proposto e REJEITADO por resolver um problema que não era o observado).
+fix, conferir se ele bate com o SINTOMA real antes de aplicar.
 
 ## Onde fica (IMPORTANTE — caminho corrigido)
 - Repo: `C:\Users\NetSolutions\Desktop\EMPRESA AGENCIA 2026\PASTA AGENTES DE IA\AGENTE-IA-TESTE`
@@ -21,7 +20,7 @@ proposto e REJEITADO por resolver um problema que não era o observado).
 - Deploy: editar → git add/commit → git push origin master → a Vercel publica sozinha.
 - NÃO confundir com a pasta "AGENTE ANALISE ADS".
 - A raiz serve `index.html`.
-- HEAD atual em master: `9058581` (ui: remover Nova Análise; botões Analisar e Relatório no estilo destaque).
+- HEAD atual em master: `954f82e` (style: atualizar cores do modal Criar Campanha para paleta VendeMais Ads).
 
 ## Stack
 HTML/CSS/JS puro (sem bundler), ESM via CDN; serverless Vercel (Node 18+, fetch nativo);
@@ -111,7 +110,8 @@ de screen-upload) com Sair + email do usuário visível em todas as telas. Logo
 do header (dash-brand) virou o "voltar para home" (handler do antigo btn-new:
 destroyCharts + S.data=null + screen('screen-upload')). Botões Criar Campanha,
 Analisar e Relatório Semanal no estilo btn-analyze (azul destaque). Hero antigo
-removido do screen-upload.
+removido do screen-upload. Botão "Exportar PDF" removido (código morto pós-LEVA UI).
+Pasta CAMPANHAS/ removida do repositório (artefato de 29/mai).
 
 ### 8. RELATÓRIO SEMANAL — VALIDADO (11/06)
 Botão que gera PDF dos últimos 7 dias (todas as campanhas com atividade, ativas
@@ -138,12 +138,29 @@ Corrigida vulnerabilidade onde cliente A podia agir em campanha do cliente B
 admin.js GET busca email via Admin API do Supabase (auth/v1/admin/users/{id})
 em paralelo (Promise.all, fail-silent). admin.html exibe nome_empresa || email || '—'.
 
+### 11. IDENTIDADE VISUAL — VendeMais Ads (12/06)
+Rebranding completo: "Meta Ads Analytics" / "Digitalizando Negócios" → **VendeMais Ads**.
+
+**Paleta:** laranja `#FF6B00` (--accent) + azul escuro `#1B3A6B` (--accent2).
+Header gradient: `linear-gradient(135deg, #0f2347, #1B3A6B)`.
+
+**Logo:** `assets/logo-vendemais.png` (JPEG com fundo transparente, commitado).
+- Header (`index.html` + `admin.html`): `<img height:44px>` + `<span>VendeMais Ads</span>` ao lado.
+- Tela principal (`#screen-upload`): logo 200px centralizada, acima dos botões de ação.
+- Auth overlay: logo 56px + título "VendeMais Ads".
+- `<title>` pages: "VendeMais Ads" (index) e "Painel Admin — VendeMais Ads" (admin).
+
+**Modal `#modalCampanha` — cores atualizadas:**
+- Box fundo: fallback `#1a1a2e` → `#0f1a2e`.
+- Todos os inputs/selects/textareas/addCidade: `#0f0f1e` → `#0d1b2e`, bordas `#444` → `#2e4a6e`.
+- Inputs `type="file"` (imagem + vídeo): agora estilizados (background, borda, padding, border-radius).
+- Botão "Criar campanha": `var(--accent,#7c3aed)` → `var(--accent)` (laranja, sem fallback roxo).
+
 ### FIX CRÍTICO — vercel.json (11/06)
 O catch-all do vercel.json da RAIZ apontava para CAMPANHAS/index.html (versão
 antiga de 29/mai, sem as correções). Qualquer rota fora de "/" servia o frontend
-errado. Corrigido para /index.html. ATENÇÃO: os endpoints api/ só existem na raiz
-(as correções de segurança SEMPRE rodaram corretamente); o bug era só de frontend.
-A pasta CAMPANHAS/ é artefato antigo — avaliar remoção.
+errado. Corrigido para /index.html. Os endpoints api/ sempre rodaram corretamente;
+o bug era só de frontend.
 
 ### Ciclo completo do gestor (funcionando)
 criar (imagem+vídeo) → analisar → comparar criativos → excluir o perdedor → escalar o campeão; a
@@ -188,12 +205,9 @@ listar-campanhas traz: status configurado + effective_status agregado + motivo_r
 thumbnails + daily/lifetime budget. campanha-acao usa activateAdset (start_time best-effort).
 
 ## PENDÊNCIAS / PRÓXIMOS (em ordem)
-- Remover/avaliar botão "Exportar PDF" do header (sobrou após a reorganização)
 - Deletar 2 registros de teste em meta_config (Supabase) apontando para a conta
   da agência (act_908604161717895)
 - Configurar contas Meta reais dos clientes de teste via /admin.html
-- Definir nome novo do produto (ideias: Meta Gestor, Gestor Meta)
-- Avaliar remoção da pasta CAMPANHAS/ (artefato antigo, 29/mai)
 - Meta App Review: aguardando retorno da Business Verification
 
 ## APRENDIZADOS / GOTCHAS
@@ -233,3 +247,7 @@ thumbnails + daily/lifetime budget. campanha-acao usa activateAdset (start_time 
   contas de clientes sozinho. O que libera operar em produção é o Advanced Access ao
   ads_management, via App Review separado. Páginas de privacidade e exclusão de dados são
   pré-requisitos obrigatórios.
+- `border-radius` em `<img>` não funciona sem `overflow:hidden` no container — usar `<div
+  style="display:inline-block;border-radius:Xpx;overflow:hidden">` ao redor da imagem.
+- Arquivo binário (PNG/JPEG) substituído localmente pode aparecer como "deleted" no git status se
+  o nome/extensão mudar. Usar Move-Item com caminho absoluto para renomear no Windows.
