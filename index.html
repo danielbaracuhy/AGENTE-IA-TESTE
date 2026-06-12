@@ -299,7 +299,6 @@ tr:hover td{background:var(--surface2)}
     </div>
     <div class="dash-actions">
       <button class="btn btn-primary" onclick="abrirModalCampanha()">➕ Criar Campanha</button>
-      <button class="btn btn-primary" id="btn-pdf">⬇ Exportar PDF</button>
       <button class="btn btn-ghost" id="btn-sair" onclick="authSignOut()" style="display:none">⎋ Sair</button>
       <span id="user-info"></span>
     </div>
@@ -736,120 +735,6 @@ function renderCharts({ camps, totals: t }) {
 }
 
 // ═══════════════════════════════════════════════════════
-// PDF EXPORT
-// ═══════════════════════════════════════════════════════
-function exportPDF() {
-  const data = S.data; if (!data) return;
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-  const W = 210, now = new Date().toLocaleString('pt-BR');
-  const { periodo, camps, totals: t, alerts, recs } = data;
-  let y = 0;
-
-  // Header
-  doc.setFillColor(20,60,120); doc.rect(0,0,W,28,'F');
-  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(16);
-  doc.text('RELATORIO DE CAMPANHAS - META ADS', 14, 12);
-  doc.setFont('helvetica','normal'); doc.setFontSize(9);
-  doc.text('Digitalizando Negocios  |  Analise de Performance', 14, 19);
-  doc.text(now, W-14, 19, { align:'right' });
-  y = 36;
-
-  doc.setTextColor(80,80,80); doc.setFontSize(8);
-  doc.text(`Periodo: ${periodo.inicio||''} a ${periodo.fim||''}  |  Campanhas: ${camps.length}  |  Fonte: Meta Ads API`, 14, y);
-  y += 9;
-
-  // KPI table
-  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,60,120);
-  doc.text('RESUMO EXECUTIVO', 14, y); y += 3;
-  doc.autoTable({
-    startY: y,
-    head:[['Metrica','Valor','Avaliacao']],
-    body:[
-      ['Total Investido',          `R$ ${t.ti.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, ''],
-      ['Total de Cliques',         t.tc.toLocaleString('pt-BR'), ''],
-      ['Alcance Total',            t.ta.toLocaleString('pt-BR'), ''],
-      ['Impressoes',               t.tIm.toLocaleString('pt-BR'), ''],
-      ['Conversoes (Compras)',      t.tv.toString(), ''],
-      ['Custo por Compra (CPP)',    t.cpp_m>0?`R$ ${t.cpp_m.toLocaleString('pt-BR',{minimumFractionDigits:2})}`:'—', t.cpp_m>150?'ALTO':t.cpp_m>100?'MODERADO':'OTIMO'],
-      ['CTR Medio',                `${t.ctr_m.toLocaleString('pt-BR',{minimumFractionDigits:2})}%`, t.ctr_m>=3?'EXCELENTE':t.ctr_m>=1?'BOM':'CRITICO'],
-      ['Taxa Conversao Landing Page',`${t.conv_m.toLocaleString('pt-BR',{minimumFractionDigits:1})}%`, t.conv_m>=5?'EXCELENTE':t.conv_m>=2?'MODERADO':'CRITICO'],
-      ['Taxa Click -> Landing Page', `${t.clp_m.toLocaleString('pt-BR',{minimumFractionDigits:0})}%`, t.clp_m>=80?'BOM':t.clp_m>=65?'ATENCAO':'CRITICO'],
-    ],
-    theme:'grid',
-    headStyles:{ fillColor:[20,60,120], textColor:255, fontSize:8, fontStyle:'bold' },
-    bodyStyles:{ fontSize:8 },
-    columnStyles:{ 0:{fontStyle:'bold',cellWidth:72}, 2:{fontStyle:'bold',cellWidth:28} },
-    alternateRowStyles:{ fillColor:[245,247,255] },
-  });
-  y = doc.lastAutoTable.finalY + 8;
-
-  // Campaigns detail
-  if (y > 220) { doc.addPage(); y = 20; }
-  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,60,120);
-  doc.text('DETALHAMENTO POR CAMPANHA', 14, y); y += 3;
-  doc.autoTable({
-    startY: y,
-    head:[['Campanha','Invest.','Cliques','CTR','Views LP','Conv.','CPP']],
-    body: camps.map(c => [
-      c.nome.slice(0,33),
-      `R$ ${c.investido.toLocaleString('pt-BR',{minimumFractionDigits:2})}`,
-      c.cliques.toLocaleString('pt-BR'),
-      `${c.ctr.toLocaleString('pt-BR',{minimumFractionDigits:2})}%`,
-      c.lp_views.toLocaleString('pt-BR'),
-      c.conversoes.toString(),
-      c.cpp>0?`R$ ${c.cpp.toLocaleString('pt-BR',{minimumFractionDigits:2})}`:'—',
-    ]),
-    theme:'grid',
-    headStyles:{ fillColor:[20,60,120], textColor:255, fontSize:8, fontStyle:'bold' },
-    bodyStyles:{ fontSize:8 },
-    alternateRowStyles:{ fillColor:[245,247,255] },
-  });
-  y = doc.lastAutoTable.finalY + 8;
-
-  // Alerts
-  if (y > 230) { doc.addPage(); y = 20; }
-  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,60,120);
-  doc.text('ALERTAS E SINALIZACOES', 14, y); y += 6;
-  alerts.slice(0,8).forEach(a => {
-    if (y > 265) { doc.addPage(); y = 20; }
-    const fc = a.t==='green'?[220,250,230]:a.t==='yellow'?[255,248,210]:[255,225,225];
-    const tc2 = a.t==='green'?[20,120,40]:a.t==='yellow'?[150,100,0]:[180,40,40];
-    doc.setFillColor(...fc); doc.rect(12,y-4,W-24,13,'F');
-    doc.setTextColor(...tc2); doc.setFont('helvetica','bold'); doc.setFontSize(8);
-    doc.text(a.title, 15, y+1);
-    doc.setTextColor(50,50,50); doc.setFont('helvetica','normal');
-    const ln = doc.splitTextToSize(a.desc, W-32);
-    doc.text(ln[0], 15, y+6.5); y += 16;
-  });
-
-  // Recs
-  if (y > 230) { doc.addPage(); y = 20; }
-  y += 2;
-  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,60,120);
-  doc.text('RECOMENDACOES ESTRATEGICAS', 14, y); y += 6;
-  recs.forEach((r,i) => {
-    if (y > 258) { doc.addPage(); y = 20; }
-    doc.setFillColor(235,240,255);
-    doc.setTextColor(20,60,120); doc.setFont('helvetica','bold'); doc.setFontSize(9);
-    doc.text(`${i+1}. ${r.title}`, 15, y+1);
-    doc.setTextColor(50,50,50); doc.setFont('helvetica','normal'); doc.setFontSize(8);
-    const ls = doc.splitTextToSize(r.desc, W-30);
-    ls.slice(0,2).forEach((l,li) => doc.text(l,15,y+7+li*5));
-    y += 7 + Math.min(ls.length,2)*5 + 5;
-  });
-
-  // Footer all pages
-  const pg = doc.getNumberOfPages();
-  for (let i=1;i<=pg;i++) {
-    doc.setPage(i);
-    doc.setFillColor(20,60,120); doc.rect(0,288,W,9,'F');
-    doc.setTextColor(200,210,255); doc.setFontSize(7); doc.setFont('helvetica','normal');
-    doc.text(`Pagina ${i} de ${pg}  |  Gerado em: ${now}  |  Meta Ads Analytics - Digitalizando Negocios`, W/2, 293.5,{align:'center'});
-  }
-
-  doc.save(`relatorio-meta-ads-${new Date().toISOString().slice(0,10)}.pdf`);
-}
 
 // ── RELATÓRIO SEMANAL ─────────────────────────────────────
 async function relatorioSemanal() {
@@ -1157,7 +1042,6 @@ document.addEventListener('DOMContentLoaded', () => {
     screen('screen-upload');
   });
 
-  document.getElementById('btn-pdf').addEventListener('click', exportPDF);
 });
 
 // ═══════════════════════════════════════════════════════
