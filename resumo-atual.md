@@ -1,30 +1,36 @@
-# Resumo do Projeto — AGENTE-IA-TESTE (atualizado 12/06/2026)
+# Resumo do Projeto — AGENTE-IA-TESTE / VendeMais Ads (atualizado 12/06/2026)
 
 ## Visão geral
-App de gestão de tráfego com IA para PMEs — marca: **VendeMais Ads** (ex "Digitalizando Negócios").
-Cria campanhas no Meta Ads, acompanha ao vivo, escala e analisa criativos. Objetivo: vender pra
-várias empresas. Caso de teste: infoproduto próprio (óleo de fritura usado — Hotmart, R$597).
+App de gestão de tráfego com IA para PMEs. Marca: **VendeMais Ads** (renomeado de "Meta Ads Analytics" em 12/06).
+Tagline: "Marketing Digital para Pequenas Empresas".
+Caso de teste: infoproduto próprio (óleo de fritura usado — Hotmart, R$597).
+Objetivo: vender para várias empresas como SaaS white-label.
+
+## Identidade visual
+- Nome: VendeMais Ads
+- Paleta: laranja #FF6B00 (accent/CTA) + azul escuro #1B3A6B (accent2/header)
+- Logo: assets/logo-vendemais.png (PNG transparente no repo)
+- Logo grande centralizada na tela principal (200px) + logo+nome no header
+- Mascote/comunicação: personagem com megafone para redes sociais (não é a logo principal)
 
 ## Modo de trabalho
 Claude Code ("Cláudio") = EXECUTOR; Daniel e Claude = PENSADORES. Daniel decide o rumo, Claude
 desenha, e todo pedido de execução sai como prompt pronto pra colar — nunca passo a passo manual.
 Uma mudança por vez, revisar diff antes do commit, nunca auto-commitar sem aprovação. Direto, sem
 bajulação. Daniel se comunica muito por screenshots.
-DISCIPLINA (reforçada nesta sessão): diagnosticar antes de corrigir; quando o executor propõe um
-fix, conferir se ele bate com o SINTOMA real antes de aplicar.
+DISCIPLINA: diagnosticar antes de corrigir; quando o executor propõe um fix, conferir se ele bate
+com o SINTOMA real antes de aplicar.
 
-## Onde fica (IMPORTANTE — caminho corrigido)
+## Onde fica
 - Repo: `C:\Users\NetSolutions\Desktop\EMPRESA AGENCIA 2026\PASTA AGENTES DE IA\AGENTE-IA-TESTE`
-  (CAMINHO MUDOU — agora dentro de "EMPRESA AGENCIA 2026").
 - GitHub: danielbaracuhy/AGENTE-IA-TESTE · branch master · Site: agente-ia-teste-roan.vercel.app
-- Deploy: editar → git add/commit → git push origin master → a Vercel publica sozinha.
+- Deploy: editar → git add/commit → git push origin master → Vercel publica sozinha.
 - NÃO confundir com a pasta "AGENTE ANALISE ADS".
-- A raiz serve `index.html`.
-- HEAD atual em master: `954f82e` (style: atualizar cores do modal Criar Campanha para paleta VendeMais Ads).
+- HEAD atual em master: `926e2a6` (última sessão — paleta + logo + renomeação)
 
 ## Stack
 HTML/CSS/JS puro (sem bundler), ESM via CDN; serverless Vercel (Node 18+, fetch nativo);
-Vercel Blob (vídeo); Graph API v25.0 em todos os endpoints; orçamento CBO no nível da campanha.
+Vercel Blob (vídeo); Graph API v25.0; orçamento CBO no nível da campanha.
 Banco: Supabase (Postgres + Auth). Frontend importa supabase-js via esm.sh.
 
 ---
@@ -33,221 +39,112 @@ Banco: Supabase (Postgres + Auth). Frontend importa supabase-js via esm.sh.
 
 ### 1. CRIADOR
 Campanha (CBO) → conjunto (WhatsApp/site) → criativo(s) → anúncio(s). Multi-criativo (imagem +
-vídeo competindo). Vídeo via Blob. Simples de propósito (sem pixel/venda). Multi-cliente VALIDADO
-(`getMetaConfig`, fonte: db).
+vídeo competindo). Vídeo via Blob. Multi-cliente VALIDADO.
 
 ### 2. MINHAS CAMPANHAS
-Lista ao vivo; Ativar/Pausar (cascata); Excluir; ESCALAR (+20%/+50%/personalizado; CBO vs ABO).
+Lista ao vivo; Ativar/Pausar (cascata); Excluir; Escalar (+20%/+50%/personalizado; CBO vs ABO).
+Status honesto, modal de confirmação de orçamento, miniaturas, auto-refresh (45s enquanto "Em análise"),
+atualização otimista ao ativar. VALIDADO.
 
-- Status honesto — `estadoDaCampanha(c)` lidera pelo status CONFIGURADO. Árvore de 5 (1ª que bate
-  vence): (1) anúncio DISAPPROVED/WITH_ISSUES → "Reprovada"; (2) `c.status != ACTIVE` → "Pausada";
-  (3) ligada + PENDING_REVIEW/IN_PROCESS/PREAPPROVED/PENDING_BILLING_INFO → "Em análise";
-  (4) ligada + ACTIVE → "No ar"; (5) fallback → "Pausada". Multi-anúncio: DISAPPROVED >
-  PENDING_REVIEW > ACTIVE. VALIDADO.
-- Estado "Reprovada" — `listar-campanhas` busca ads.limit(10){effective_status,ad_review_feedback,
-  creative{thumbnail_url,image_url}}; `agregateAds()` ordena por prioridade e extrai
-  `motivo_reprovacao` achatando global + placement_specific com Object.values (join '\n', null no
-  fallback).
-- Modal de confirmação de orçamento ao Ativar — daily/lifetime (centavos /100 no backend), BRL.
-  VALIDADO.
-- Fix start_time — `activateAdset` tenta {status:ACTIVE, start_time:now}; se o Meta recusar (adset
-  já iniciado) refaz só com status:ACTIVE; propaga erro real se o retry falhar. VALIDADO.
-- Miniaturas do criativo nos cards (até 2). VALIDADO.
-- Analisar POR CAMPANHA — VALIDADO AO VIVO (09/06): botão "Analisar" no card abre o analisador
-  escopado na campanha (header "Analisando: X", criativos só dela); botão global continua mostrando
-  tudo.
-- AUTO-REFRESH (LEVA 2b) — APLICADO E VALIDADO EM PRODUÇÃO (09/06): enquanto houver campanha "Em
-  análise", recarrega a lista a cada 45s. UM timer só (`setTimeout`, NÃO setInterval; clearTimeout
-  antes de reagendar). `_agendarAutoRefresh()` é chamado no FIM do render (carregarCampanhas) — é
-  isso que rearma o ciclo a cada renderização. Pausa com aba oculta (document.hidden → clearTimeout)
-  e faz refresh imediato ao voltar o foco (visibilitychange). Listener uma vez só
-  (`_autoRefreshBound`). Guarda de modal: não busca com modal-ativar/modal-escalar/modalCampanha
-  abertos (detecta por el.style.display!=='none', com null-guard `el&&`). Selo "ao vivo"
-  (`camps-refresh-hint`) ligado ao `_temEmAnalise()`. VALIDADO: campanha ativada ficou "Em análise"
-  e virou "No ar" sozinha em ~2,5 min.
-- ATUALIZAÇÃO OTIMISTA AO ATIVAR — APLICADO E VALIDADO (09/06): depois do 200 da ativação, NÃO
-  chama carregarCampanhas() imediato (correria com a propagação do Meta e pegaria PAUSED). Renderiza
-  local marcando {status:'ACTIVE', effective_status:'PENDING_REVIEW'} → card vira "Em análise" na
-  hora → _temEmAnalise()=true → auto-refresh agenda → 45s depois busca o status real. Pausar/excluir
-  seguem com carregarCampanhas()/row.remove(). Corrigiu o bug da tela "resetar pro estado inicial"
-  pós-ativação.
+### 3. TRAVA DE STATUS (backend)
+Helper lib/verificar-status.js. Plugado nos 4 endpoints de escrita. Fail-open para infra. VALIDADO.
 
-### 3. TRAVA DE STATUS (backend) — APLICADO E VALIDADO (09/06)
-Helper `lib/verificar-status.js` (na RAIZ, mesmo padrão do meta-config) → verificarStatus(req)
-retorna {permitido, status, fonte, motivo}:
-- Sem Authorization → {permitido:true, fonte:'env'} (agência).
-- Erro de infra no Supabase → {permitido:true, fonte:'fallback'} + warn (não trava por infra).
-- Token válido sem cliente → {permitido:true, fonte:'fallback'}.
-- Cliente ativo/trial → permitido (fonte:db).
-- Suspenso/outro → {permitido:false, motivo:'Conta suspensa. Regularize para criar ou alterar
-  campanhas.'}.
-Plugado SÓ nos 4 endpoints de ESCRITA (criar-campanha, campanha-acao, escalar-campanha,
-anuncio-acao), depois do método HTTP e antes de qualquer chamada ao Meta. Leitura (listar/insights)
-e vídeo/blob ficam liberados. VALIDADO nos dois caminhos: suspenso → 403 nos logs da Vercel
-([verificar-status] fonte: db status: suspenso); trial → 200.
-Mensagem no frontend: os handlers de escrita leem `data.erro || data.error` antes do genérico, então
-o 403 mostra "Conta suspensa..." (antes mostrava "resposta inesperada"). VALIDADO.
-
-### 4. ANALISADOR — LEITOR UNIVERSAL DE CONVERSÃO (validado)
-detectarConversao(actions) por prioridade: purchase → fb_pixel_purchase → lead → fb_pixel_lead →
-lead_grouped → conversa → landing_page_view → fallback. actionValue usa === exato (não soma
-duplicatas). Rótulo segue o que foi contado. VALIDADO com dados reais. CSV = código morto (a remover).
+### 4. ANALISADOR — LEITOR UNIVERSAL DE CONVERSÃO
+detectarConversao(actions) por prioridade. VALIDADO com dados reais.
 
 ### 5. LOGIN / MULTI-CLIENTE (Supabase)
-Passos 1–3 concluídos: Auth (login/senha, overlay, sessão persistente), gatilho on_auth_user_created
-cria clientes (trial/cliente), getMetaConfig (Bearer → user.id → clientes.id → meta_config) com
-fallback env. config.js na raiz (público, publishable key). Secret rotacionada. VALIDADO.
+Auth (login/senha, overlay, sessão persistente), gatilho on_auth_user_created, getMetaConfig com
+fallback env. VALIDADO.
 
-### 6. SALDO PRÉ-PAGO META — VALIDADO (10/06)
-Exibido no topo de Minhas Campanhas. Buscado em paralelo com campanhas via Promise.allSettled
-(fail-silent). Só aparece para contas pré-pagas (is_prepay_account=true). Campo saldo:{valor,moeda}
-incluído no response de listar-campanhas.
+### 6. SALDO PRÉ-PAGO META
+Exibido no topo de Minhas Campanhas. Fail-silent. VALIDADO.
 
-### 7. LEVA UI — VALIDADO (11/06)
-Auto-load de campanhas no showApp() (sem botão Carregar). Criar Campanha como
-botão principal. Header global (dash-header movido para fora dos screens, antes
-de screen-upload) com Sair + email do usuário visível em todas as telas. Logo
-do header (dash-brand) virou o "voltar para home" (handler do antigo btn-new:
-destroyCharts + S.data=null + screen('screen-upload')). Botões Criar Campanha,
-Analisar e Relatório Semanal no estilo btn-analyze (azul destaque). Hero antigo
-removido do screen-upload. Botão "Exportar PDF" removido (código morto pós-LEVA UI).
-Pasta CAMPANHAS/ removida do repositório (artefato de 29/mai).
+### 7. LEVA UI
+Auto-load de campanhas, Criar Campanha como botão principal, header global com Sair + email,
+logo como "voltar para home". VALIDADO.
 
-### 8. RELATÓRIO SEMANAL — VALIDADO (11/06)
-Botão que gera PDF dos últimos 7 dias (todas as campanhas com atividade, ativas
-ou pausadas). Função relatorioSemanal() no frontend, reusa insights-campanhas
-?preset=last_7d + insights-anuncios por campanha (Promise.all) + listar-campanhas.
-jsPDF + autotable. Inclui melhor criativo da semana (menor custo/conversão).
-Não criou endpoint novo.
+### 8. RELATÓRIO SEMANAL
+PDF dos últimos 7 dias. jsPDF + autotable. Melhor criativo da semana. VALIDADO.
 
-### 9. SEGURANÇA MULTI-TENANT — VALIDADO (11/06) [CRÍTICO]
-Corrigida vulnerabilidade onde cliente A podia agir em campanha do cliente B
-(endpoints por ID aceitavam qualquer ID com token global da agência).
-- lib/verificar-ownership.js (RAIZ, fail-closed): resolve adAccountId via
-  getMetaConfig(req), busca account_id do objeto na Graph API, normaliza prefixo
-  act_, compara. Diverge ou erro de infra → 403. Aplicado em campanha-acao,
-  escalar-campanha, anuncio-acao, insights-anuncios.
-- getMetaConfig agora retorna campo `fonte`: 'db' | 'env' | 'env-com-bearer'.
-  env-com-bearer = cliente autenticado SEM meta_config no banco (caía no fallback
-  da agência). Bloqueado com 403 tanto na escrita (verificar-ownership) quanto na
-  leitura (listar-campanhas, insights-campanhas, insights-anuncios).
-- Resultado: cliente sem meta_config próprio não vê nem opera nada. Cliente com
-  meta_config no banco isola corretamente. Modo agência (sem Bearer) preservado.
+### 9. SEGURANÇA MULTI-TENANT (CRÍTICO)
+lib/verificar-ownership.js — cliente A não acessa campanha do cliente B. Bloqueio de cliente sem
+meta_config próprio. VALIDADO.
 
-### 10. PAINEL ADMIN — email do usuário (11/06)
-admin.js GET busca email via Admin API do Supabase (auth/v1/admin/users/{id})
-em paralelo (Promise.all, fail-silent). admin.html exibe nome_empresa || email || '—'.
+### 10. PAINEL ADMIN
+Lista clientes, email via Admin API, Config Meta (4 campos: ad_account, page, business, whatsapp),
+ativar/suspender. VALIDADO.
 
-### 11. IDENTIDADE VISUAL — VendeMais Ads (12/06)
-Rebranding completo: "Meta Ads Analytics" / "Digitalizando Negócios" → **VendeMais Ads**.
-
-**Paleta:** laranja `#FF6B00` (--accent) + azul escuro `#1B3A6B` (--accent2).
-Header gradient: `linear-gradient(135deg, #0f2347, #1B3A6B)`.
-
-**Logo:** `assets/logo-vendemais.png` (JPEG com fundo transparente, commitado).
-- Header (`index.html` + `admin.html`): `<img height:44px>` + `<span>VendeMais Ads</span>` ao lado.
-- Tela principal (`#screen-upload`): logo 200px centralizada, acima dos botões de ação.
-- Auth overlay: logo 56px + título "VendeMais Ads".
-- `<title>` pages: "VendeMais Ads" (index) e "Painel Admin — VendeMais Ads" (admin).
-
-**Modal `#modalCampanha` — cores atualizadas:**
-- Box fundo: fallback `#1a1a2e` → `#0f1a2e`.
-- Todos os inputs/selects/textareas/addCidade: `#0f0f1e` → `#0d1b2e`, bordas `#444` → `#2e4a6e`.
-- Inputs `type="file"` (imagem + vídeo): agora estilizados (background, borda, padding, border-radius).
-- Botão "Criar campanha": `var(--accent,#7c3aed)` → `var(--accent)` (laranja, sem fallback roxo).
-
-### FIX CRÍTICO — vercel.json (11/06)
-O catch-all do vercel.json da RAIZ apontava para CAMPANHAS/index.html (versão
-antiga de 29/mai, sem as correções). Qualquer rota fora de "/" servia o frontend
-errado. Corrigido para /index.html. Os endpoints api/ sempre rodaram corretamente;
-o bug era só de frontend.
-
-### Ciclo completo do gestor (funcionando)
-criar (imagem+vídeo) → analisar → comparar criativos → excluir o perdedor → escalar o campeão; a
-lista se atualiza sozinha enquanto há campanha em análise; contas suspensas são barradas na escrita.
+### 11. IDENTIDADE VISUAL VendeMais Ads (12/06)
+- Paleta laranja+azul escuro aplicada em index.html e admin.html
+- Logo PNG transparente em assets/logo-vendemais.png
+- Logo 200px centralizada na tela principal
+- Header: logo pequena + "VendeMais Ads" em branco
+- Modal Criar Campanha com cores atualizadas
+- Título e footer renomeados para VendeMais Ads
+- Pasta CAMPANHAS/ removida (artefato antigo)
+- Botão Exportar PDF removido do header (código morto)
 
 ---
 
 ## BANCO (Supabase)
-- Projeto ref: hboghsnggybnwvunnqju → SUPABASE_URL = https://hboghsnggybnwvunnqju.supabase.co
-- Tabela clientes: id (uuid), auth_user_id (uuid, unique → auth.users), nome_empresa,
-  status (trial|ativo|suspenso, default trial), role (cliente|admin, default cliente), created_at.
-- Tabela meta_config: id, cliente_id (→ clientes), meta_ad_account_id, meta_page_id,
-  meta_business_id, conectado_em, ativo. (meta_config NÃO tem auth_user_id — liga por cliente_id.)
-- RLS ligado: cada cliente vê/edita só o seu (por auth_user_id = auth.uid()); admin/agência opera no
-  backend com a SECRET key (passa por cima do RLS).
-- Gatilho on_auth_user_created cria o clientes no cadastro.
-- Chaves novas: publishable (sb_publishable_…, frontend, no config.js) + secret (sb_secret_…,
-  backend, na Vercel como SUPABASE_SECRET_KEY). Secret já rotacionada.
-- Dica: o painel do Supabase quebra com o tradutor do Chrome — manter em inglês.
+- Projeto ref: hboghsnggybnwvunnqju
+- Tabela clientes: id, auth_user_id, nome_empresa, status (trial|ativo|suspenso), role, created_at
+- Tabela meta_config: id, cliente_id, meta_ad_account_id, meta_page_id, meta_business_id, conectado_em, ativo
+- RLS ligado. Admin opera com SECRET key.
+- Chaves: publishable (frontend/config.js) + secret (Vercel/SUPABASE_SECRET_KEY)
 
-## DECISÕES DE ARQUITETURA / NEGÓCIO
-- Duas camadas: identidade (login/senha + banco) separada do acesso ao Meta (por cliente).
-- Acesso ao Meta = modelo agência/system-user: token de system user (NÃO expira) no env; por cliente
-  o banco guarda só os IDs (conta/página). OAuth do cliente rejeitado (token de 60 dias expira).
-- CRIADOR simples (WhatsApp/site). Venda/pixel = futuro, com guarda-corpos.
-- Serviço PRO/agência (arte, página, assistência) = trabalho da agência, não feature do app.
-- Migração com fallback pro env: o caminho novo (banco) só ativa quando há config do cliente.
+## ONBOARDING DE CLIENTES
+Fluxo: cadastro no app (trial) → agência coleta 4 IDs Meta do cliente → configura no /admin.html
+→ ativa (trial→ativo). Documento: passa_a_passo_conectar_cliente.pdf (atualizar URL quando domínio mudar).
+4 dados necessários por cliente:
+- Ad Account ID: act_XXXXXXXXX (Gerenciador de Anúncios)
+- Page ID: número da página do Facebook (Sobre → ID da Página)
+- Business ID: business.facebook.com → Configurações → topo
+- WhatsApp: número com DDI+DDD (ex: 5517991414397) — NÃO é um ID do Meta
+
+## META APP REVIEW
+- App "analista de ads" (ID: 1720446445748871) — status: Publicado
+- ads_management: "Pronto para teste" (Standard Access)
+- ads_read: "Pronto para teste" (Standard Access)
+- Marketing API Access Tier: "Acesso limitado"
+- Business Verification (CNPJ): já submetida, aguardando aprovação do Meta
+- Para escala (clientes externos sem acesso admin): precisa Advanced Access via Tech Provider
+- NÃO clicar em "Continue" no fluxo Tech Provider sem documentos em mãos — processo irreversível
+- Verificar status da verificação em: business.facebook.com → Configurações → Verificação da empresa
+
+## TOKEN META
+- Token atual: 60 dias (ainda válido em 12/06/2026)
+- PENDENTE: migrar para System User token (não expira)
+- Verificar expiração: developers.facebook.com → Graph API Explorer → Debug token
 
 ## ENV VARS
-- Vercel (backend): META_ACCESS_TOKEN, META_AD_ACCOUNT_ID (act_908604161717895),
-  META_PAGE_ID (949892491548927), META_WHATSAPP_NUMBER (5517991414397), BLOB_*,
-  SUPABASE_URL, SUPABASE_SECRET_KEY.
-- Frontend (config.js, público): SUPABASE_URL + publishable key.
-- Meta: App "analista de ads" (App ID 1720446445748871), token de 60 dias (migrar p/ system user).
+- Vercel: META_ACCESS_TOKEN, META_AD_ACCOUNT_ID (act_908604161717895), META_PAGE_ID,
+  META_WHATSAPP_NUMBER, BLOB_*, SUPABASE_URL, SUPABASE_SECRET_KEY
+- Frontend (config.js): SUPABASE_URL + publishable key
 
 ## ENDPOINTS (api/) + helpers
 criar-campanha, blob-upload, video-start, video-status, blob-delete, listar-campanhas,
 campanha-acao, escalar-campanha, insights-campanhas, insights-anuncios, anuncio-acao.
-Helpers na RAIZ: lib/meta-config.js, lib/verificar-status.js.
-Trava de status (verificarStatus): criar-campanha, campanha-acao, escalar-campanha, anuncio-acao.
-listar-campanhas traz: status configurado + effective_status agregado + motivo_reprovacao +
-thumbnails + daily/lifetime budget. campanha-acao usa activateAdset (start_time best-effort).
+Helpers na RAIZ: lib/meta-config.js, lib/verificar-status.js, lib/verificar-ownership.js.
 
-## PENDÊNCIAS / PRÓXIMOS (em ordem)
-- Deletar 2 registros de teste em meta_config (Supabase) apontando para a conta
-  da agência (act_908604161717895)
-- Configurar contas Meta reais dos clientes de teste via /admin.html
-- Meta App Review: aguardando retorno da Business Verification
+## PENDÊNCIAS / PRÓXIMOS
+- Migrar token Meta para System User (não expira)
+- Verificar/aguardar Business Verification no Meta
+- Configurar contas Meta dos clientes de teste via /admin.html (quando tiver os IDs)
+- Definir e registrar domínio .com.br para VendeMais Ads
+- Atualizar URL no documento passa_a_passo_conectar_cliente.pdf após migração de domínio
+- Meta App Review: Advanced Access (aguarda Business Verification)
 
 ## APRENDIZADOS / GOTCHAS
-- Auto-refresh = setTimeout (one-shot), não setInterval. O ciclo só se renova porque
-  _agendarAutoRefresh() é chamado no FIM do render. Cancela com a aba oculta e retoma no foco; quem
-  sai da aba e recarrega (em vez de voltar pra aba) não vê o resume.
-- "Em análise" → "No ar" depende da revisão do Facebook, que leva MAIS que 45s (minutos a horas).
-  Auto-refresh funcionando mantém "Em análise" até o FB aprovar; NÃO é bug.
-- Atualização otimista ao ativar evita a corrida com a propagação do Meta. estadoDaCampanha precisa
-  de status:'ACTIVE' (pra não cair em Pausada) E effective_status:'PENDING_REVIEW' (pra acertar Em
-  análise). renderCampanhas(camps) atualiza _ultimasCampanhas=camps na 1ª linha, então o
-  _agendarAutoRefresh no fim lê a global já otimista.
-- Erros de escrita no frontend: ler data.erro || data.error (chaves não são uniformes entre
-  endpoints). 403 de conta suspensa usa a chave error.
-- Console.log do navegador NÃO aparece nos logs da Vercel (esses são só do servidor /api). Logs de
-  cliente vão no DevTools (F12) da própria página.
-- Diagnosticar antes de corrigir; conferir o fix contra o SINTOMA. Um fix pode estar tecnicamente
-  certo e ainda resolver o problema errado.
-- actionValue usa === exato (não soma variantes de compra duplicadas).
-- Helper de backend fora de api/ (senão a Vercel cria rota inútil).
-- Static frontend sem bundler: .env não funciona no navegador; chaves públicas no config.js
-  (commitado). Secret só no backend (Vercel).
-- Supabase: Site URL = domínio do Vercel; painel quebra com tradutor do Chrome.
+- Auto-refresh = setTimeout (one-shot). Cancela com aba oculta, retoma no foco.
+- Atualização otimista ao ativar evita corrida com propagação do Meta.
+- Erros de escrita: ler data.erro || data.error (chaves não uniformes).
+- Helper de backend fora de api/ (senão Vercel cria rota inútil).
 - Variável de ambiente nova na Vercel só vale após Redeploy.
-- Padrão getMetaConfig: endpoints com conta/página → getMetaConfig (fallback env); endpoints que
-  operam só por ID → só o header Bearer no frontend.
-- "Unexpected token '<', <!DOCTYPE..." = fetch recebeu HTML = SUPABASE_URL errada/ausente OU chave
-  errada. Publishable no lugar da secret: conecta mas não ignora RLS → consulta vazia.
-- Status do card lidera pelo CONFIGURADO (on/off); revisão vem do effective_status do anúncio.
-- ad_review_feedback é objeto aninhado (global + placement_specific) — achatar com Object.values.
-- Orçamento do Meta vem em CENTAVOS (string) → /100 + BRL, uma vez só no backend.
-- start_time não é editável em adset já iniciado → ativação best-effort (tenta com, retry sem).
-- DEP0169 (url.parse): já estava corrigido antes do resumo registrar — grep confirmou new URL()
-  nos dois únicos endpoints que leem query params (insights-campanhas, insights-anuncios). Ao
-  registrar pendências técnicas, verificar no código antes de assumir que ainda existe.
-- App Review do Meta: Business Verification (CNPJ) é só um portão de confiança — não dá acesso a
-  contas de clientes sozinho. O que libera operar em produção é o Advanced Access ao
-  ads_management, via App Review separado. Páginas de privacidade e exclusão de dados são
-  pré-requisitos obrigatórios.
-- `border-radius` em `<img>` não funciona sem `overflow:hidden` no container — usar `<div
-  style="display:inline-block;border-radius:Xpx;overflow:hidden">` ao redor da imagem.
-- Arquivo binário (PNG/JPEG) substituído localmente pode aparecer como "deleted" no git status se
-  o nome/extensão mudar. Usar Move-Item com caminho absoluto para renomear no Windows.
+- Supabase secret key para RLS bypass (publishable falha silenciosamente).
+- Meta retorna valores monetários em centavos — /100 uma vez só no backend.
+- start_time não editável em adset já iniciado → retry sem start_time.
+- ad_review_feedback é objeto aninhado — achatar com Object.values.
+- Standard Access ("Pronto para teste") funciona só em contas onde o app tem acesso admin.
+- WhatsApp no onboarding = número com DDI+DDD, não um ID do Meta.
+- Commit = salva localmente no Git. Push = envia para GitHub. Vercel detecta o push e publica.
