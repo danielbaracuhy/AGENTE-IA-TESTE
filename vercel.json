@@ -3,6 +3,7 @@
     { "handle": "filesystem" },
     { "src": "/([^/]+\\.html)", "dest": "/$1" },
     { "src": "/", "dest": "/index.html" },
+    { "src": "/admin", "dest": "/admin.html" },
     {
       "src": "/(.*)",
       "dest": "/index.html",
