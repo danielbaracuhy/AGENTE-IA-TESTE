@@ -298,6 +298,7 @@ tr:hover td{background:var(--surface2)}
       </div>
     </div>
     <div class="dash-actions">
+      <button class="btn btn-ghost" id="btn-voltar" onclick="window.history.back()" style="display:none;border:1px solid rgba(255,255,255,0.35);color:#fff;">← Voltar</button>
       <button class="btn btn-primary" onclick="abrirModalCampanha()">➕ Criar Campanha</button>
       <button class="btn btn-ghost" id="btn-sair" onclick="authSignOut()" style="display:none">⎋ Sair</button>
       <span id="user-info"></span>
@@ -433,6 +434,7 @@ function screen(id) {
   });
   document.getElementById(id).style.display =
     id === 'screen-loading' ? 'flex' : id === 'screen-dashboard' ? 'block' : 'flex';
+  document.getElementById('btn-voltar').style.display = id === 'screen-dashboard' ? '' : 'none';
 }
 
 // ═══════════════════════════════════════════════════════
