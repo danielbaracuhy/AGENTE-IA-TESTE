@@ -471,8 +471,10 @@ function genAlerts(camps) {
 
     // Zero conversões
     if (c.conversoes === 0)
-      out.push({ t:'red', ico:'🔴', title:`Zero Conversões — ${sn}`,
-        desc:`Nenhuma compra registrada pelo pixel. Verificar instalação do pixel, página de vendas e oferta. Considerar pausar.` });
+      out.push({ t:'red', ico:'🔴', title:`Sem resultado ainda — ${sn}`,
+        desc: c.tipo==='whatsapp'
+          ? `Nenhuma conversa iniciada ainda — confira se o número do WhatsApp está certo e como está a mensagem inicial.`
+          : `Nenhuma visita à sua página ainda — confira se o link está certo e se a página abre no celular.` });
 
     // Taxa LP
     if (c.lp_views > 0) {
@@ -528,8 +530,8 @@ function genRecs(camps, t) {
   // Campanhas sem conversão → pausar
   const zero = camps.filter(c => c.conversoes === 0);
   if (zero.length)
-    out.push({ ico:'⏸', title:`Pausar ${zero.length} Campanha(s) Sem Conversão`,
-      desc:`${zero.map(c=>`"${c.nome.slice(0,28)}${c.nome.length>28?'...':''}"`).join(', ')} sem compras registradas. Pausar, verificar pixel e estrutura da página antes de reativar.`,
+    out.push({ ico:'⏸', title:`Pausar ${zero.length} Campanha(s) Sem Resultado`,
+      desc:`${zero.map(c=>`"${c.nome.slice(0,28)}${c.nome.length>28?'...':''}"`).join(', ')} sem nenhum resultado registrado — vale revisar o destino de cada uma (link da página ou número do WhatsApp) antes de seguir investindo.`,
       tag:'🚫 Urgente' });
 
   // Boas campanhas → escalar
