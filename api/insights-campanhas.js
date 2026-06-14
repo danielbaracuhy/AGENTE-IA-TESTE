@@ -78,10 +78,8 @@ export default async function handler(req,res){
       return { nome:row.campaign_name, status:statusMap[row.campaign_id]||"—",
         investido, alcance:num(row.reach), impressoes:num(row.impressions), frequencia:num(row.frequency),
         cliques, ctr:num(row.inline_link_click_ctr), cpc:num(row.cost_per_inline_link_click), cpm:num(row.cpm),
-        lp_views, custo_lp: lp_views>0?investido/lp_views:0, conversoes,
+        lp_views, conversoes,
         cpp: conversoes>0?investido/conversoes:0,
-        taxa_clp: cliques>0?(lp_views/cliques)*100:0,
-        taxa_conv: lp_views>0?(conversoes/lp_views)*100:0,
         tipo, rotuloSub, objective, _campaignId:row.campaign_id };
     });
     if(campaignId) campanhas=campanhas.filter(c=>c._campaignId===campaignId);

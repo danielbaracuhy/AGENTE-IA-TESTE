@@ -533,8 +533,6 @@ function p(v, suf='', dec=2) { return v.toLocaleString('pt-BR',{minimumFractionD
 
 function ctrClass(v)  { return v>=3?'bg-green':v>=1?'bg-yellow':'bg-red'; }
 function cppClass(v)  { return v<=0?'bg-blue':v<100?'bg-green':v<150?'bg-yellow':'bg-red'; }
-function lpClass(v)   { return v>=80?'bg-green':v>=65?'bg-yellow':'bg-red'; }
-function convClass(v) { return v>=5?'bg-green':v>=2?'bg-yellow':'bg-red'; }
 
 // ═══════════════════════════════════════════════════════
 // RENDER DASHBOARD
@@ -554,7 +552,7 @@ function render(data, fname) {
      <div class="meta-item">⏱ <strong>Análise:</strong> ${now}</div>`;
   document.getElementById('ds-gen-time').textContent = `Análise gerada em: ${now}`;
 
-  // KPIs — tipo-aware. conv_m/cpp_m mantidos em totals para genRecs; card 104% removido.
+  // KPIs — tipo-aware. Card 104% removido.
   const cpc_m = t.tc > 0 ? t.ti/t.tc : 0;
   const _kTipos = new Set(camps.map(c=>c.tipo));
   const _kSolo  = _kTipos.size===1 ? [..._kTipos][0] : 'misto';
@@ -956,9 +954,7 @@ function processFromAPI(apiData) {
   const tc = sum('cliques'), tlp = sum('lp_views'), tv = sum('conversoes');
   const totals = {
     ti, ta, tIm, tc, tlp, tv,
-    cpp_m: tv > 0 ? ti / tv : 0, ctr_m: tIm > 0 ? (tc / tIm) * 100 : 0,
-    conv_m: tlp > 0 ? (tv / tlp) * 100 : 0, clp_m: tc > 0 ? (tlp / tc) * 100 : 0,
-    cpc_m: tc > 0 ? ti / tc : 0,
+    ctr_m: tIm > 0 ? (tc / tIm) * 100 : 0,
   };
   const alerts = genAlerts(camps);
   const recs = genRecs(camps, totals);
