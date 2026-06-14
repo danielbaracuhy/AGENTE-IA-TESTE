@@ -710,6 +710,8 @@ function destroyCharts() {
 
 function renderCharts({ camps, totals: t }) {
   destroyCharts();
+  const _rTipos = new Set(camps.map(c=>c.tipo));
+  const _rSolo  = _rTipos.size===1 ? [..._rTipos][0] : 'misto';
   Chart.defaults.color = '#94a3b8';
   Chart.defaults.borderColor = '#2e334d';
   Chart.defaults.font.family = "'Segoe UI',system-ui,sans-serif";
@@ -727,24 +729,23 @@ function renderCharts({ camps, totals: t }) {
   const bg  = i => ca(COLORS[keys[i%keys.length]][0],'0.75)').replace(')',');').replace('75)','75)');
   const brd = i => ca(COLORS[keys[i%keys.length]][0],'1)').replace(')',');').replace('1)','1)');
 
-  // Bar chart
+  // Bar chart — tipo-aware: site→Visitas LP (amber), WA→Conversas WA (purple); sem barra duplicada/vazia
   const single = camps.length === 1;
-  const barLabels  = single ? ['Impressões','Alcance','Cliques','Views LP','Conversões']
+  const _bLast = _rSolo==='whatsapp'
+    ? {lbl:'Conversas',val:t.tv, bg:`rgba(124,58,237,0.75)`,bd:`rgba(124,58,237,1)`}
+    : {lbl:'Visitas',  val:t.tlp,bg:`rgba(245,158,11,0.75)`,bd:`rgba(245,158,11,1)`};
+  const barLabels  = single ? ['Impressões','Alcance','Cliques',_bLast.lbl]
                              : camps.map(c => c.nome.slice(0,18)+(c.nome.length>18?'…':''));
   const barDatasets = single
     ? [{ label:'Volume',
-         data:[t.tIm,t.ta,t.tc,t.tlp,t.tv],
-         backgroundColor:[
-           `rgba(79,126,248,0.75)`,`rgba(6,182,212,0.75)`,
-           `rgba(34,197,94,0.75)`,`rgba(245,158,11,0.75)`,`rgba(124,58,237,0.75)`],
-         borderColor:[
-           `rgba(79,126,248,1)`,`rgba(6,182,212,1)`,
-           `rgba(34,197,94,1)`,`rgba(245,158,11,1)`,`rgba(124,58,237,1)`],
+         data:[t.tIm,t.ta,t.tc,_bLast.val],
+         backgroundColor:[`rgba(79,126,248,0.75)`,`rgba(6,182,212,0.75)`,`rgba(34,197,94,0.75)`,_bLast.bg],
+         borderColor:    [`rgba(79,126,248,1)`,    `rgba(6,182,212,1)`,    `rgba(34,197,94,1)`,    _bLast.bd],
          borderWidth:1.5,borderRadius:5 }]
     : [
-        { label:'Cliques',    data:camps.map(c=>c.cliques),    backgroundColor:`rgba(79,126,248,0.75)`, borderColor:`rgba(79,126,248,1)`, borderWidth:1.5,borderRadius:4 },
-        { label:'Views LP',   data:camps.map(c=>c.lp_views),  backgroundColor:`rgba(245,158,11,0.75)`, borderColor:`rgba(245,158,11,1)`, borderWidth:1.5,borderRadius:4 },
-        { label:'Conversões', data:camps.map(c=>c.conversoes),backgroundColor:`rgba(124,58,237,0.75)`, borderColor:`rgba(124,58,237,1)`, borderWidth:1.5,borderRadius:4 },
+        { label:'Cliques',    data:camps.map(c=>c.cliques),   backgroundColor:`rgba(79,126,248,0.75)`,borderColor:`rgba(79,126,248,1)`,borderWidth:1.5,borderRadius:4 },
+        ...(_rSolo!=='whatsapp'?[{ label:'Visitas',   data:camps.map(c=>c.lp_views),  backgroundColor:`rgba(245,158,11,0.75)`,borderColor:`rgba(245,158,11,1)`,borderWidth:1.5,borderRadius:4 }]:[]),
+        ...(_rSolo!=='site'    ?[{ label:'Conversas', data:camps.map(c=>c.conversoes),backgroundColor:`rgba(124,58,237,0.75)`,borderColor:`rgba(124,58,237,1)`,borderWidth:1.5,borderRadius:4 }]:[]),
       ];
 
   S.charts.bar = new Chart(document.getElementById('barChart'), {
