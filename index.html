@@ -562,6 +562,9 @@ function render(data, fname) {
   const _kTiWa  = camps.filter(c=>c.tipo==='whatsapp').reduce((a,c)=>a+c.investido,0);
   const _kCpSite= _kSite>0 ? _kTiSite/_kSite : 0;
   const _kCpWa  = _kWa>0   ? _kTiWa/_kWa     : 0;
+  const _kCompras = camps.filter(c=>c.tipo==='site').reduce((a,c)=>a+(c.compras||0),0);
+  const _kReceita = camps.filter(c=>c.tipo==='site').reduce((a,c)=>a+(c.receita||0),0);
+  const _kRoas    = _kCompras>0&&t.ti>0 ? (_kReceita/t.ti).toFixed(2)+'x' : null;
   const _kRes = _kSolo==='site'
     ? {lbl:'Visitas ao Site',   val:n(_kSite), sub:'visitas à página',       ico:'🌐', kc:'#f59e0b'}
     : _kSolo==='whatsapp'
@@ -578,6 +581,7 @@ function render(data, fname) {
     { ..._kRes, bdg:null },
     { ..._kCp,  bdg:null },
     { lbl:'CTR Médio',        val:p(t.ctr_m,'%'), sub:'benchmark: >1% bom, >3% ótimo',        ico:'📈', kc:t.ctr_m>=3?'#22c55e':t.ctr_m>=1?'#f59e0b':'#ef4444', bdg:null },
+    ...(_kCompras>0?[{ lbl:'ROAS', val:_kRoas, sub:`${n(_kCompras)} compra(s) · receita ${brl(_kReceita)}`, ico:'🛒', kc:'#22c55e', bdg:null }]:[]),
   ].map(k => `
     <div class="kpi" style="--kc:${k.kc}">
       <span class="kpi-icon">${k.ico}</span>
@@ -631,7 +635,7 @@ function render(data, fname) {
   const _tblH3 = _soloTipo==='site' ? 'Custo/visita' : _soloTipo==='whatsapp' ? 'Custo/conversa' : 'Custo';
   document.getElementById('tbl-head').innerHTML =
     `<tr><th>Campanha</th><th>Status</th><th>Investido</th><th>Cliques</th>
-     <th>CTR</th><th>${_tblH1}</th><th>${_tblH2}</th><th>${_tblH3}</th></tr>`;
+     <th>CTR</th><th>${_tblH1}</th><th>${_tblH2}</th><th>${_tblH3}</th><th>Compras</th><th>Receita</th><th>ROAS</th></tr>`;
   document.getElementById('tbl-body').innerHTML = camps.map(c => {
     const _res  = c.tipo==='whatsapp' ? c.conversoes : c.lp_views;
     const _taxa = c.cliques > 0 ? Math.min(100, (_res / c.cliques) * 100) : 0;
@@ -639,6 +643,9 @@ function render(data, fname) {
     const _resCell = _soloTipo==='misto'
       ? `<span style="color:${c.tipo==='whatsapp'?'#7c3aed':'#f59e0b'}">${c.tipo==='whatsapp'?'💬':'🌐'} ${n(_res)} ${_unit}</span>`
       : `${n(_res)}`;
+    const _compras = c.tipo==='site'&&c.compras>0 ? n(c.compras) : '—';
+    const _receita = c.tipo==='site'&&c.receita>0 ? brl(c.receita) : '—';
+    const _roas    = c.tipo==='site'&&c.compras>0&&c.investido>0 ? (c.receita/c.investido).toFixed(2)+'x' : '—';
     return `
     <tr>
       <td><strong>${c.nome}</strong></td>
@@ -649,6 +656,9 @@ function render(data, fname) {
       <td>${_resCell}</td>
       <td>${p(_taxa,'%',0)}</td>
       <td>${c.cpp>0?brl(c.cpp):'—'}</td>
+      <td>${_compras}</td>
+      <td>${_receita}</td>
+      <td>${_roas}</td>
     </tr>`;
   }).join('');
 
