@@ -6,18 +6,14 @@ const DEFAULT_PRESET = "last_14d";
 const ALLOWED_PRESETS = new Set(["today","yesterday","last_7d","last_14d","last_30d","this_month","last_month","maximum"]);
 function num(v){ const n=parseFloat(v); return Number.isFinite(n)?n:0; }
 function actionValue(a,t){ if(!Array.isArray(a))return 0; const h=a.find(x=>x.action_type===t); return h?num(h.value):0; }
+// Detecta pelo resultado: messaging_conversation_started → WhatsApp; caso contrário → site (landing_page_view).
+// Limitação conhecida: campanha de WhatsApp com 0 conversas ainda retorna tipo:"site" até a primeira conversa.
 function detectarConversao(actions){
-  if(!Array.isArray(actions)) return {valor:0,rotuloSub:""};
-  let v;
-  v=actionValue(actions,"purchase");                             if(v>0) return {valor:v,rotuloSub:"compra"};
-  v=actionValue(actions,"offsite_conversion.fb_pixel_purchase"); if(v>0) return {valor:v,rotuloSub:"compra"};
-  v=actionValue(actions,"lead");                                 if(v>0) return {valor:v,rotuloSub:"cadastro"};
-  v=actionValue(actions,"offsite_conversion.fb_pixel_lead");     if(v>0) return {valor:v,rotuloSub:"cadastro"};
-  v=actionValue(actions,"onsite_conversion.lead_grouped");       if(v>0) return {valor:v,rotuloSub:"cadastro"};
-  const conv=actions.find(a=>/messaging_conversation_started/i.test(a.action_type||""));
-  if(conv&&num(conv.value)>0) return {valor:num(conv.value),rotuloSub:"conversa no WhatsApp"};
-  v=actionValue(actions,"landing_page_view");                    if(v>0) return {valor:v,rotuloSub:"visita na página"};
-  return {valor:0,rotuloSub:""};
+  if(Array.isArray(actions)){
+    const conv=actions.find(a=>/messaging_conversation_started/i.test(a.action_type||""));
+    if(conv&&num(conv.value)>0) return {tipo:"whatsapp", valor:num(conv.value), rotuloSub:"conversas no WhatsApp"};
+  }
+  return {tipo:"site", valor:actionValue(actions,"landing_page_view"), rotuloSub:"visitas ao site"};
 }
 function getQuery(req){ if(req.query&&Object.keys(req.query).length)return req.query; try{ return Object.fromEntries(new URL(req.url,"http://localhost").searchParams);}catch{return {};} }
 
@@ -49,14 +45,14 @@ export default async function handler(req,res){
     if(!adsR.ok||adsJson.error) return res.status(adsR.status||500).json({error:adsJson.error?.message||"Erro ao buscar anúncios.",details:adsJson.error||null});
 
     const insMap={}; if(Array.isArray(insJson.data)) for(const r of insJson.data) insMap[r.ad_id]=r;
-    let rotuloChegada="conv.";
-    for(const r of (insJson.data||[])){ const {rotuloSub}=detectarConversao(r.actions); if(rotuloSub){rotuloChegada=rotuloSub;break;} }
+    const _rotulos=[...new Set((insJson.data||[]).filter(r=>Array.isArray(r.actions)&&r.actions.length>0).map(r=>detectarConversao(r.actions).rotuloSub))];
+    const rotuloChegada=_rotulos.length===1?_rotulos[0]:"";
     const anuncios=(adsJson.data||[]).map(ad=>{
       const ins=insMap[ad.id]||{};
       const investido=num(ins.spend), cliques=num(ins.inline_link_clicks), ctr=num(ins.inline_link_click_ctr);
-      const {valor:conversoes}=detectarConversao(ins.actions);
+      const {tipo,valor:conversoes}=detectarConversao(ins.actions);
       return { id:ad.id, nome:ad.name, thumbnail:ad.creative?.thumbnail_url||null,
-        investido, cliques, ctr, conversoes, cpp: conversoes>0?investido/conversoes:0, comDados:!!insMap[ad.id] };
+        investido, cliques, ctr, tipo, conversoes, cpp: conversoes>0?investido/conversoes:0, comDados:!!insMap[ad.id] };
     });
     return res.status(200).json({ anuncios, rotuloChegada });
   }catch(err){ return res.status(500).json({error:err.message||"Falha inesperada."}); }

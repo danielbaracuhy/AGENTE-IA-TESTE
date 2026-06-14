@@ -15,18 +15,14 @@ const STATUS_PT = { ACTIVE:"Ativa", PAUSED:"Pausada", CAMPAIGN_PAUSED:"Pausada",
 function num(v){ const n=parseFloat(v); return Number.isFinite(n)?n:0; }
 function actionValue(actions,type){ if(!Array.isArray(actions))return 0;
   const h=actions.find(a=>a.action_type===type); return h?num(h.value):0; }
+// Detecta pelo resultado: messaging_conversation_started → WhatsApp; caso contrário → site (landing_page_view).
+// Limitação conhecida: campanha de WhatsApp com 0 conversas ainda retorna tipo:"site" até a primeira conversa.
 function detectarConversao(actions){
-  if(!Array.isArray(actions)) return {valor:0,rotuloSub:""};
-  let v;
-  v=actionValue(actions,"purchase");                             if(v>0) return {valor:v,rotuloSub:"compra"};
-  v=actionValue(actions,"offsite_conversion.fb_pixel_purchase"); if(v>0) return {valor:v,rotuloSub:"compra"};
-  v=actionValue(actions,"lead");                                 if(v>0) return {valor:v,rotuloSub:"cadastro"};
-  v=actionValue(actions,"offsite_conversion.fb_pixel_lead");     if(v>0) return {valor:v,rotuloSub:"cadastro"};
-  v=actionValue(actions,"onsite_conversion.lead_grouped");       if(v>0) return {valor:v,rotuloSub:"cadastro"};
-  const conv=actions.find(a=>/messaging_conversation_started/i.test(a.action_type||""));
-  if(conv&&num(conv.value)>0) return {valor:num(conv.value),rotuloSub:"conversa no WhatsApp"};
-  v=actionValue(actions,"landing_page_view");                    if(v>0) return {valor:v,rotuloSub:"visita na página"};
-  return {valor:0,rotuloSub:""};
+  if(Array.isArray(actions)){
+    const conv=actions.find(a=>/messaging_conversation_started/i.test(a.action_type||""));
+    if(conv&&num(conv.value)>0) return {tipo:"whatsapp", valor:num(conv.value), rotuloSub:"conversas no WhatsApp"};
+  }
+  return {tipo:"site", valor:actionValue(actions,"landing_page_view"), rotuloSub:"visitas ao site"};
 }
 function fmtData(iso){ if(!iso)return""; const [y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; }
 function getQuery(req){ if(req.query&&Object.keys(req.query).length)return req.query;
@@ -77,8 +73,8 @@ export default async function handler(req,res){
       const investido=num(row.spend);
       const cliques=num(row.inline_link_clicks);
       const lp_views=actionValue(row.actions,"landing_page_view");
-      const {valor:conversoes,rotuloSub}=detectarConversao(row.actions);
       const objective=objectiveMap[row.campaign_id]||"";
+      const {tipo,valor:conversoes,rotuloSub}=detectarConversao(row.actions);
       return { nome:row.campaign_name, status:statusMap[row.campaign_id]||"—",
         investido, alcance:num(row.reach), impressoes:num(row.impressions), frequencia:num(row.frequency),
         cliques, ctr:num(row.inline_link_click_ctr), cpc:num(row.cost_per_inline_link_click), cpm:num(row.cpm),
@@ -86,7 +82,7 @@ export default async function handler(req,res){
         cpp: conversoes>0?investido/conversoes:0,
         taxa_clp: cliques>0?(lp_views/cliques)*100:0,
         taxa_conv: lp_views>0?(conversoes/lp_views)*100:0,
-        rotuloSub, objective, _campaignId:row.campaign_id };
+        tipo, rotuloSub, objective, _campaignId:row.campaign_id };
     });
     if(campaignId) campanhas=campanhas.filter(c=>c._campaignId===campaignId);
 
