@@ -596,24 +596,42 @@ function render(data, fname) {
       <p class="kpi-sub">${k.sub}</p>
     </div>`).join('');
 
-  // Funnel
-  const funnelRows = [
-    { lbl:'Impressões', val:t.tIm, pct:100,              col:'#4f7ef8' },
-    { lbl:'Alcance',    val:t.ta,  pct:t.tIm?t.ta/t.tIm*100:0, col:'#06b6d4' },
-    { lbl:'Cliques',    val:t.tc,  pct:t.ctr_m,          col:'#22c55e' },
-    { lbl:'Views LP',   val:t.tlp, pct:t.clp_m,          col:'#f59e0b' },
-    { lbl:'Conversões', val:t.tv,  pct:t.tIm?t.tv/t.tIm*100:0, col:'#7c3aed' },
+  // Funil Consolidado — cada % é taxa de passagem para o passo imediatamente anterior (clampado a 100)
+  const _tipos=new Set(camps.map(c=>c.tipo));
+  const _soloTipo=_tipos.size===1?[..._tipos][0]:'misto';
+  const _step=(num,den)=>den>0?Math.min(100,num/den*100):0;
+  const _fRows=[
+    {lbl:'Impressões', val:t.tIm, pct:100,                   col:'#4f7ef8', first:true},
+    {lbl:'Alcance',    val:t.ta,  pct:_step(t.ta, t.tIm),    col:'#06b6d4'},
+    {lbl:'Cliques',    val:t.tc,  pct:_step(t.tc, t.ta),     col:'#22c55e'},
   ];
-  document.getElementById('funnel').innerHTML = funnelRows.map(f =>
-    `<div class="fn-row">
+  if(_soloTipo==='site'){
+    _fRows.push({lbl:'Visitas ao site',    val:t.tlp, pct:_step(t.tlp,t.tc), col:'#f59e0b'});
+  } else if(_soloTipo==='whatsapp'){
+    _fRows.push({lbl:'Conversas WhatsApp', val:t.tv,  pct:_step(t.tv, t.tc), col:'#7c3aed'});
+  } else {
+    const _tvSite=camps.filter(c=>c.tipo==='site').reduce((a,c)=>a+c.lp_views,0);
+    const _tvWa  =camps.filter(c=>c.tipo==='whatsapp').reduce((a,c)=>a+c.conversoes,0);
+    _fRows.push({split:true, site:_tvSite, wa:_tvWa});
+  }
+  document.getElementById('funnel').innerHTML=_fRows.map(f=>{
+    if(f.split) return `<div class="fn-row">
+       <span class="fn-lbl">Resultado</span>
+       <div style="flex:1;display:flex;flex-direction:column;gap:3px;padding:2px 0">
+         <span style="font-size:10px;color:#f59e0b">🌐 Site: <strong>${n(f.site)}</strong> visitas</span>
+         <span style="font-size:10px;color:#7c3aed">💬 WhatsApp: <strong>${n(f.wa)}</strong> conversas</span>
+       </div>
+       <span class="fn-pct"></span></div>`;
+    return `<div class="fn-row">
        <span class="fn-lbl">${f.lbl}</span>
        <div class="fn-wrap">
-         <div class="fn-bar" data-w="${Math.min(f.pct,100).toFixed(1)}" style="width:0%;background:${f.col}">${n(f.val)}</div>
+         <div class="fn-bar" data-w="${f.pct.toFixed(1)}" style="width:0%;background:${f.col}">${n(f.val)}</div>
        </div>
-       <span class="fn-pct">${f.pct.toFixed(1)}%</span>
-     </div>`).join('');
-  requestAnimationFrame(() =>
-    document.querySelectorAll('.fn-bar').forEach(b => { b.style.width = b.dataset.w + '%'; })
+       <span class="fn-pct"${f.first?'':' title="% do passo anterior"'}>${f.pct.toFixed(1)}%</span>
+     </div>`;
+  }).join('');
+  requestAnimationFrame(()=>
+    document.querySelectorAll('.fn-bar').forEach(b=>{b.style.width=b.dataset.w+'%';})
   );
 
   // Table
