@@ -651,22 +651,32 @@ function render(data, fname) {
     document.querySelectorAll('.fn-bar').forEach(b=>{b.style.width=b.dataset.w+'%';})
   );
 
-  // Table
+  // Table — 3 cols tipo-aware: Resultado · Taxa (clique→resultado) · Custo
+  const _tblH1 = _soloTipo==='site' ? 'Visitas' : _soloTipo==='whatsapp' ? 'Conversas' : 'Resultado';
+  const _tblH2 = _soloTipo==='site' ? 'Clique→página' : _soloTipo==='whatsapp' ? 'Clique→conversa' : 'Taxa';
+  const _tblH3 = _soloTipo==='site' ? 'Custo/visita' : _soloTipo==='whatsapp' ? 'Custo/conversa' : 'Custo';
   document.getElementById('tbl-head').innerHTML =
     `<tr><th>Campanha</th><th>Status</th><th>Investido</th><th>Cliques</th>
-     <th>CTR</th><th>Views LP</th><th>Taxa LP</th><th>Conv.</th><th>CPP</th></tr>`;
-  document.getElementById('tbl-body').innerHTML = camps.map(c => `
+     <th>CTR</th><th>${_tblH1}</th><th>${_tblH2}</th><th>${_tblH3}</th></tr>`;
+  document.getElementById('tbl-body').innerHTML = camps.map(c => {
+    const _res  = c.tipo==='whatsapp' ? c.conversoes : c.lp_views;
+    const _taxa = c.cliques > 0 ? Math.min(100, (_res / c.cliques) * 100) : 0;
+    const _unit = c.tipo==='whatsapp' ? 'conversas' : 'visitas';
+    const _resCell = _soloTipo==='misto'
+      ? `<span style="color:${c.tipo==='whatsapp'?'#7c3aed':'#f59e0b'}">${c.tipo==='whatsapp'?'💬':'🌐'} ${n(_res)} ${_unit}</span>`
+      : `${n(_res)}`;
+    return `
     <tr>
       <td><strong>${c.nome}</strong></td>
       <td><span class="badge ${c.status==='active'?'bg-green':'bg-blue'}">${c.status==='active'?'● Ativa':'● '+c.status}</span></td>
       <td>${brl(c.investido)}</td>
       <td>${n(c.cliques)}</td>
       <td><span class="badge ${ctrClass(c.ctr)}">${p(c.ctr,'%')}</span></td>
-      <td>${n(c.lp_views)}</td>
-      <td><span class="badge ${lpClass(c.taxa_clp)}">${p(c.taxa_clp,'%',0)}</span></td>
-      <td>${c.conversoes}</td>
-      <td><span class="badge ${cppClass(c.cpp)}">${c.cpp>0?brl(c.cpp):'—'}</span></td>
-    </tr>`).join('');
+      <td>${_resCell}</td>
+      <td>${p(_taxa,'%',0)}</td>
+      <td>${c.cpp>0?brl(c.cpp):'—'}</td>
+    </tr>`;
+  }).join('');
 
   // Alerts
   document.getElementById('alerts').innerHTML = alerts.map(a =>
