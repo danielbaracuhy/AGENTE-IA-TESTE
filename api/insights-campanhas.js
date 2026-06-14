@@ -85,7 +85,6 @@ export default async function handler(req,res){
         lp_views, conversoes,
         cpp: conversoes>0?investido/conversoes:0,
         compras, receita,
-        action_values_raw: row.action_values,
         tipo, rotuloSub, objective, _campaignId:row.campaign_id };
     });
     if(campaignId) campanhas=campanhas.filter(c=>c._campaignId===campaignId);
