@@ -170,6 +170,7 @@ tr:hover td{background:var(--surface2)}
 .al.green{border-left-color:var(--green)}
 .al.yellow{border-left-color:var(--yellow)}
 .al.red{border-left-color:var(--red)}
+.al.info{border-left-color:var(--cyan)}
 .al-icon{
   width:32px;height:32px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0
@@ -177,10 +178,12 @@ tr:hover td{background:var(--surface2)}
 .green .al-icon{background:rgba(34,197,94,.15)}
 .yellow .al-icon{background:rgba(245,158,11,.15)}
 .red .al-icon{background:rgba(239,68,68,.15)}
+.info .al-icon{background:rgba(6,182,212,.15)}
 .al-title{font-weight:600;font-size:12px;margin-bottom:2px}
 .green .al-title{color:var(--green)}
 .yellow .al-title{color:var(--yellow)}
 .red .al-title{color:var(--red)}
+.info .al-title{color:var(--cyan)}
 .al-desc{font-size:11px;color:var(--muted);line-height:1.5}
 
 /* Recommendations */
@@ -476,23 +479,14 @@ function genAlerts(camps) {
           ? `Nenhuma conversa iniciada ainda — confira se o número do WhatsApp está certo e como está a mensagem inicial.`
           : `Nenhuma visita à sua página ainda — confira se o link está certo e se a página abre no celular.` });
 
-    // Taxa LP
-    if (c.lp_views > 0) {
-      if (c.taxa_conv < 2)
-        out.push({ t:'red',    ico:'🔴', title:`Conversão LP Crítica — ${sn}`,
-          desc:`Taxa de ${p(c.taxa_conv,'%',1)} abaixo de 2%. Página com problemas sérios de copy, oferta ou carregamento.` });
-      else if (c.taxa_conv < 5)
-        out.push({ t:'yellow', ico:'🟡', title:`Conversão LP Moderada — ${sn}`,
-          desc:`Taxa de ${p(c.taxa_conv,'%',1)} entre 2% e 5%. No benchmark, mas pode melhorar com testes de copy e CTA.` });
-      else
-        out.push({ t:'green',  ico:'🟢', title:`Conversão LP Excelente — ${sn}`,
-          desc:`Taxa de ${p(c.taxa_conv,'%',1)} acima de 5%. Página de vendas convertendo muito bem. Escalar o tráfego.` });
+    // Passagem clique→resultado (informativo, sem limiar de julgamento)
+    if (c.cliques > 0 && c.conversoes > 0) {
+      const _tx = Math.min(100, (c.conversoes / c.cliques) * 100).toFixed(0);
+      out.push({ t:'info', ico:'ℹ️', title:`Clique→resultado — ${sn}`,
+        desc: c.tipo==='whatsapp'
+          ? `Dos que clicaram, ${_tx}% iniciaram conversa no WhatsApp. Pra melhorar essa passagem, os suspeitos comuns são: a mensagem inicial, a oferta, ou o número.`
+          : `Dos que clicaram, ${_tx}% chegaram na sua página. Pra melhorar essa passagem, os suspeitos comuns são: página lenta, link errado, ou que não abre no celular.` });
     }
-
-    // Perda click → LP
-    if (c.cliques > 0 && c.taxa_clp < 70)
-      out.push({ t:'yellow', ico:'🟡', title:`Perda de Tráfego — ${sn}`,
-        desc:`Apenas ${p(c.taxa_clp,'%',0)} dos cliques chegaram à LP (ideal >80%). Verificar velocidade e disponibilidade da página.` });
   });
   return out;
 }
@@ -503,23 +497,11 @@ function genAlerts(camps) {
 function genRecs(camps, t) {
   const out = [];
 
-  // CTR alto + conv baixa → otimizar LP
-  if (t.ctr_m >= 2 && t.conv_m < 3)
-    out.push({ ico:'🎯', title:'Otimizar a Página de Vendas',
-      desc:`CTR de ${p(t.ctr_m,'%')} mostra anúncio eficiente, mas a conversão de ${p(t.conv_m,'%',1)} na LP está limitando os resultados. Melhorar headline, prova social, CTA e remover distrações.`,
-      tag:'🔥 Alta Prioridade' });
-
   // CPP alto → revisar público
   if (t.cpp_m > 120)
     out.push({ ico:'👥', title:'Revisar Público e Criativo',
       desc:`CPP médio de ${brl(t.cpp_m)} está elevado. Testar públicos Lookalike 1-3%, revisar oferta e criar variações do criativo com ângulos diferentes (benefício vs. problema vs. prova social).`,
       tag:'⚡ Impacto Alto' });
-
-  // Taxa click→LP baixa → velocidade
-  if (t.clp_m < 75)
-    out.push({ ico:'⚡', title:'Melhorar Velocidade da Página',
-      desc:`${p(t.clp_m,'%',0)} dos cliques chegam à LP (ideal >80%). Otimizar PageSpeed para mobile (meta >90pts), comprimir imagens, usar CDN e garantir hospedagem estável.`,
-      tag:'🛠 Técnico' });
 
   // CTR baixo → novos criativos
   if (t.ctr_m < 1.5)
