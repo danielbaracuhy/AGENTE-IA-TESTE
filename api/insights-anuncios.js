@@ -8,12 +8,16 @@ function num(v){ const n=parseFloat(v); return Number.isFinite(n)?n:0; }
 function actionValue(a,t){ if(!Array.isArray(a))return 0; const h=a.find(x=>x.action_type===t); return h?num(h.value):0; }
 // Detecta pelo resultado: messaging_conversation_started → WhatsApp; caso contrário → site (landing_page_view).
 // Limitação conhecida: campanha de WhatsApp com 0 conversas ainda retorna tipo:"site" até a primeira conversa.
-function detectarConversao(actions){
+function detectarConversao(actions, actionValues){
   if(Array.isArray(actions)){
     const conv=actions.find(a=>/messaging_conversation_started/i.test(a.action_type||""));
-    if(conv&&num(conv.value)>0) return {tipo:"whatsapp", valor:num(conv.value), rotuloSub:"conversas no WhatsApp"};
+    if(conv&&num(conv.value)>0) return {tipo:"whatsapp", valor:num(conv.value), rotuloSub:"conversas no WhatsApp", compras:0, receita:0};
   }
-  return {tipo:"site", valor:actionValue(actions,"landing_page_view"), rotuloSub:"visitas ao site"};
+  const compras=actionValue(actions,"purchase");
+  const receita=Array.isArray(actionValues)
+    ?(actionValues.find(a=>a.action_type==="purchase")?num(actionValues.find(a=>a.action_type==="purchase").value):0)
+    :0;
+  return {tipo:"site", valor:actionValue(actions,"landing_page_view"), rotuloSub:"visitas ao site", compras, receita};
 }
 function getQuery(req){ if(req.query&&Object.keys(req.query).length)return req.query; try{ return Object.fromEntries(new URL(req.url,"http://localhost").searchParams);}catch{return {};} }
 
@@ -50,9 +54,9 @@ export default async function handler(req,res){
     const anuncios=(adsJson.data||[]).map(ad=>{
       const ins=insMap[ad.id]||{};
       const investido=num(ins.spend), cliques=num(ins.inline_link_clicks), ctr=num(ins.inline_link_click_ctr);
-      const {tipo,valor:conversoes}=detectarConversao(ins.actions);
+      const {tipo,valor:conversoes,compras,receita}=detectarConversao(ins.actions,ins.action_values);
       return { id:ad.id, nome:ad.name, thumbnail:ad.creative?.thumbnail_url||null,
-        investido, cliques, ctr, tipo, conversoes, cpp: conversoes>0?investido/conversoes:0, comDados:!!insMap[ad.id] };
+        investido, cliques, ctr, tipo, conversoes, cpp: conversoes>0?investido/conversoes:0, compras, receita, comDados:!!insMap[ad.id] };
     });
     return res.status(200).json({ anuncios, rotuloChegada });
   }catch(err){ return res.status(500).json({error:err.message||"Falha inesperada."}); }
