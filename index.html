@@ -459,19 +459,6 @@ function genAlerts(camps) {
       out.push({ t:'green',  ico:'🟢', title:`CTR Excelente — ${sn}`,
         desc:`CTR de ${p(c.ctr,'%')} acima de 3%. Criativo altamente relevante. Candidato ideal para escala de orçamento.` });
 
-    // CPP
-    if (c.cpp > 0) {
-      if (c.cpp > 150)
-        out.push({ t:'red',    ico:'🔴', title:`Custo por Compra Alto — ${sn}`,
-          desc:`CPP de ${brl(c.cpp)} acima de R$150. Campanha ineficiente. Revisar segmentação, criativo e oferta.` });
-      else if (c.cpp > 100)
-        out.push({ t:'yellow', ico:'🟡', title:`Custo por Compra Moderado — ${sn}`,
-          desc:`CPP de ${brl(c.cpp)} entre R$100 e R$150. Aceitável, mas há oportunidade de redução com otimização.` });
-      else
-        out.push({ t:'green',  ico:'🟢', title:`Custo por Compra Ótimo — ${sn}`,
-          desc:`CPP de ${brl(c.cpp)} abaixo de R$100. Excelente eficiência de aquisição. Manter e escalar.` });
-    }
-
     // Zero conversões
     if (c.conversoes === 0)
       out.push({ t:'red', ico:'🔴', title:`Sem resultado ainda — ${sn}`,
@@ -497,12 +484,6 @@ function genAlerts(camps) {
 function genRecs(camps, t) {
   const out = [];
 
-  // CPP alto → revisar público
-  if (t.cpp_m > 120)
-    out.push({ ico:'👥', title:'Revisar Público e Criativo',
-      desc:`CPP médio de ${brl(t.cpp_m)} está elevado. Testar públicos Lookalike 1-3%, revisar oferta e criar variações do criativo com ângulos diferentes (benefício vs. problema vs. prova social).`,
-      tag:'⚡ Impacto Alto' });
-
   // CTR baixo → novos criativos
   if (t.ctr_m < 1.5)
     out.push({ ico:'🎨', title:'Testar Novos Criativos',
@@ -516,11 +497,22 @@ function genRecs(camps, t) {
       desc:`${zero.map(c=>`"${c.nome.slice(0,28)}${c.nome.length>28?'...':''}"`).join(', ')} sem nenhum resultado registrado — vale revisar o destino de cada uma (link da página ou número do WhatsApp) antes de seguir investindo.`,
       tag:'🚫 Urgente' });
 
-  // Boas campanhas → escalar
-  const boas = camps.filter(c => c.ctr >= 3 && c.cpp > 0 && c.cpp < 100);
+  // Candidatas a escalar — CTR ≥ 3% (referência mercado) + taxa clique→resultado ≥ média do mesmo tipo
+  const _rByTipo = {};
+  ['site','whatsapp'].forEach(tp => {
+    const tpC = camps.filter(c=>c.tipo===tp);
+    const sC  = tpC.reduce((a,c)=>a+c.cliques,0);
+    const sR  = tpC.reduce((a,c)=>a+c.conversoes,0);
+    _rByTipo[tp] = sC > 0 ? sR/sC : 0;
+  });
+  const boas = camps.filter(c => {
+    if (c.ctr < 3) return false;
+    if (camps.filter(x=>x.tipo===c.tipo).length === 1) return true; // único do tipo → só CTR
+    return c.cliques > 0 && (c.conversoes/c.cliques) >= _rByTipo[c.tipo];
+  });
   if (boas.length)
-    out.push({ ico:'📈', title:'Escalar Campanhas com Bom Desempenho',
-      desc:`${boas.map(c=>`"${c.nome.slice(0,22)}${c.nome.length>22?'...':''}"`).join(', ')} com CTR alto e CPP ótimo. Aumentar orçamento 15-20%/semana e criar públicos Lookalike.`,
+    out.push({ ico:'📈', title:'Candidatas a Escalar (CTR forte, referência de mercado)',
+      desc:`${boas.map(c=>`"${c.nome.slice(0,22)}${c.nome.length>22?'...':''}"`).join(', ')}. A decisão de quanto investir, olhando o custo, fica pra sua análise.`,
       tag:'📈 Escalar' });
 
   // Fallback
