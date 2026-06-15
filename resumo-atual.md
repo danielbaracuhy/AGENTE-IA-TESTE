@@ -27,6 +27,7 @@ Vercel Blob (vídeo), Graph API v25.0, Supabase (Postgres + Auth + RLS).
 ### 1. CRIADOR
 Campanha CBO → conjunto (WhatsApp/site) → criativo (imagem+vídeo) → anúncio.
 Multi-criativo competindo. Multi-cliente validado.
+Seleção de gênero (Masculino/Feminino) por checkboxes no formulário. Ambos marcados = Meta segmenta todos. Commit ece8e26.
 
 ### 2. MINHAS CAMPANHAS
 Lista ao vivo, Ativar/Pausar (cascata), Excluir, Escalar.
