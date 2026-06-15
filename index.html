@@ -1207,6 +1207,11 @@ document.addEventListener('keydown', e => {
         <label style="margin-left:8px"><input type="checkbox" class="c-plat" value="facebook" checked> Facebook</label>
         <label style="margin-left:8px"><input type="checkbox" class="c-plat" value="instagram" checked> Instagram</label>
       </div>
+      <div style="margin-top:12px;">
+        <label style="font-weight:600; display:block; margin-bottom:6px;">Gênero:</label>
+        <label style="margin-right:16px;"><input type="checkbox" id="c-genero-masc" checked> Masculino</label>
+        <label><input type="checkbox" id="c-genero-fem" checked> Feminino</label>
+      </div>
       <button onclick="enviarCampanha()" style="margin-top:8px;padding:12px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">Criar campanha (nasce pausada)</button>
       <p id="c-resultado" style="margin-top:8px"></p>
     </div>
@@ -1328,7 +1333,7 @@ async function enviarCampanha(){
     cidades:cidades,
     idadeMin:Number(document.getElementById('c-idade-min').value),
     idadeMax:Number(document.getElementById('c-idade-max').value),
-    generos:[],
+    generos:(function(){var g=[];if(document.getElementById('c-genero-masc').checked)g.push(1);if(document.getElementById('c-genero-fem').checked)g.push(2);return g.length===2?[]:g;})(),
     plataformas:plataformas,
     criativos:criativos,
     videoUrl:videoUrl
