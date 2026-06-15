@@ -1,4 +1,4 @@
-# Resumo do Projeto — VendeMais Ads (atualizado 13/06/2026)
+# Resumo do Projeto — VendeMais Ads (atualizado 14/06/2026)
 
 ## Visão geral
 App de gestão de tráfego com IA para PMEs. Marca: VendeMais Ads.
@@ -35,8 +35,15 @@ Status honesto, auto-refresh 45s, atualização otimista, miniaturas.
 ### 3. TRAVA DE STATUS
 lib/verificar-status.js nos 4 endpoints de escrita. Fail-open. Validado.
 
-### 4. ANALISADOR
-detectarConversao(actions) por prioridade. Validado com dados reais.
+### 4. ANALISADOR + CAMADA COMPRA/ROAS (14/06)
+detectarConversao(actions, actionValues) por prioridade.
+insights-campanhas.js pede action_values à Graph API.
+Entrega compras (nº de purchases) e receita (BRL real, sem divisão por 100).
+Frontend exibe colunas Compras/Receita/ROAS na tabela do Analisador.
+Card ROAS condicional nos KPIs (só aparece se compras>0 no período).
+ROAS = receita/investido, 2 casas, sufixo "x". Exibe "—" para WhatsApp e compras=0.
+Validado com dados reais: CAMP 01 OLEO USADO 13/05 → 4 compras, R$214,12, ROAS 0.33x.
+Commits: 14b3c2b (backend), 82a4fcb (frontend), 5c4c342 (limpeza debug).
 
 ### 5. LOGIN / MULTI-CLIENTE
 Supabase Auth, sessão persistente, getMetaConfig com fallback env.
@@ -58,17 +65,14 @@ vendemaisads.vercel.app/admin.html (com .html obrigatório).
 Lista clientes, Config Meta (4 campos), ativar/suspender.
 Rota /admin → /admin.html adicionada no vercel.json (commit 56ccd2a).
 
-### 11. IDENTIDADE VISUAL (12/06)
+### 11. IDENTIDADE VISUAL
 Paleta laranja+azul, logo centralizada, modal Criar Campanha atualizado.
 Botão Exportar PDF removido, pasta CAMPANHAS/ removida.
 
-### 12. TOKEN META — SYSTEM USER (13/06)
-System User criado: vendemaisads-systemuser (ID: 61590931914192)
-Acesso Admin na conta de anúncios e página Digitalizando Negócios.
-App "analista de ads" atribuído com controle total.
+### 12. TOKEN META — SYSTEM USER
+System User: vendemaisads-systemuser (ID: 61590931914192)
+Token não expira — ativo em produção via META_ACCESS_TOKEN.
 Permissões: ads_management, ads_read, business_management.
-Token gerado (não expira) e atualizado na Vercel como META_ACCESS_TOKEN.
-Redeploy realizado — token ativo em produção.
 
 ## BANCO (Supabase)
 Projeto: hboghsnggybnwvunnqju
@@ -89,7 +93,7 @@ App: analista de ads (ID: 1720446445748871) — Publicado
 ads_management + ads_read: Standard Access (Pronto para teste)
 Business Verification: submetida em 13/06, aguardando Meta
 Advanced Access: pendente aprovação da Business Verification
-Sistema User token: não expira — elimina risco de expiração a cada 60 dias
+System User token: não expira — elimina risco de expiração a cada 60 dias
 
 ## SUPABASE URL CONFIG
 Site URL: https://vendemaisads.vercel.app
@@ -100,6 +104,7 @@ Redirect URLs: https://vendemaisads.vercel.app + https://vendemaisads.vercel.app
 - Aguardar Business Verification (Meta)
 - Solicitar Advanced Access após verificação aprovada
 - Registrar domínio vendemaisads.com.br (Registro.br, R$40/ano)
+- Mudança 3 (opcional): adicionar action_values na query de insights-anuncios.js para compras/receita por anúncio
 - Integração de pagamento (próxima fase): Stripe + Mercado Pago
 
 ## GATEWAY DE PAGAMENTO (próxima fase)
@@ -113,3 +118,6 @@ Fluxo futuro: pagamento → webhook → ativa cliente no Supabase automaticament
 - Variável de ambiente na Vercel só vale após Redeploy
 - Standard Access funciona só em contas onde o app tem acesso admin
 - WhatsApp no onboarding = número com DDI+DDD, não ID do Meta
+- action_values da Meta vem em BRL real (não centavos) — não dividir por 100
+- purchase canonical é o action_type correto; Meta repete o valor em múltiplos tipos por deduplicação
+- ROAS abaixo de 1x = dado real do pixel, não bug do app
