@@ -145,7 +145,13 @@ export default async function handler(req, res) {
       const label = `criativo ${i + 1} (${item.tipo})`;
       let creativeSpec;
       if (item.tipo === 'imagem') {
-        const img = await metaPost(`${ACT}/adimages`, { bytes: item.imagemBase64 }, `${label}: upload`);
+        let b64 = item.imagemBase64;
+        if (!b64 && item.imagemUrl) {
+          const imgRes = await fetch(item.imagemUrl);
+          const buf = await imgRes.arrayBuffer();
+          b64 = Buffer.from(buf).toString('base64');
+        }
+        const img = await metaPost(`${ACT}/adimages`, { bytes: b64 }, `${label}: upload`);
         const imageHash = Object.values(img.images)[0].hash;
         creativeSpec = {
           page_id: PAGE_ID,
@@ -196,6 +202,11 @@ export default async function handler(req, res) {
     // apaga o Blob em qualquer desfecho terminal (sucesso ou erro)
     if (videoUrl) {
       try { await del(videoUrl); } catch (_) {}
+    }
+    for (const item of (creativosRaw || [])) {
+      if (item.tipo === 'imagem' && item.imagemUrl) {
+        try { await del(item.imagemUrl); } catch (_) {}
+      }
     }
   }
 }

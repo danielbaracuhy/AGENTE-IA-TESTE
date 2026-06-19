@@ -1244,11 +1244,16 @@ async function enviarCampanha(){
   var criativos=[];
   var videoUrl=null;
 
-  // ── IMAGEM ──
+  // ── IMAGEM: Blob direto, mesmo padrão do vídeo ──
   if(arqImagem){
-    out.style.color='#fff';out.textContent='Processando imagem...';
-    var imagemBase64=await new Promise(function(ok){var r=new FileReader();r.onload=function(){ok(r.result.split(',')[1]);};r.readAsDataURL(arqImagem);});
-    criativos.push({tipo:'imagem',imagemBase64:imagemBase64});
+    if(arqImagem.size>10*1024*1024){out.style.color='#f55';out.textContent='❌ Imagem muito grande. Máximo 10MB.';return;}
+    out.style.color='#fff';out.textContent='Enviando imagem...';
+    var modImg=await import('https://esm.sh/@vercel/blob/client');
+    var blobImg=await modImg.upload(arqImagem.name,arqImagem,{
+      access:'public',
+      handleUploadUrl:'/api/blob-upload',
+    });
+    criativos.push({tipo:'imagem',imagemUrl:blobImg.url});
   }
 
   // ── VÍDEO: Blob -> video-start -> polling video-status ──
