@@ -19,6 +19,7 @@ export default async function handler(req, res) {
           'image/webp',
         ],
         maximumSizeInBytes: 200 * 1024 * 1024,
+        addRandomSuffix: true,
       }),
       onUploadCompleted: async ({ blob }) => {
         console.log('blob upload completed:', blob.url);

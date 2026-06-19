@@ -1257,7 +1257,6 @@ async function enviarCampanha(){
       var blobImg=await modImg.upload(arqImagem.name,arqImagem,{
         access:'public',
         handleUploadUrl:'/api/blob-upload',
-        addRandomSuffix:true,
       });
       criativos.push({tipo:'imagem',imagemUrl:blobImg.url});
     }catch(e){out.style.color='#f87171';out.textContent='❌ Erro: '+e.message;return;}
