@@ -1214,6 +1214,9 @@ document.addEventListener('keydown', e => {
       </div>
       <button onclick="enviarCampanha()" style="margin-top:8px;padding:12px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">Criar campanha (nasce pausada)</button>
       <p id="c-resultado" style="margin-top:8px"></p>
+      <div id="c-btn-campanhas" style="display:none;margin-top:8px">
+        <button onclick="fecharModalCampanha();document.getElementById('sec-campanhas').scrollIntoView({behavior:'smooth'});" style="width:100%;padding:10px;background:#1B3A6B;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Ver Minhas Campanhas</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1224,6 +1227,7 @@ function abrirModalCampanha(){
   document.getElementById('c-imagem').value='';
   document.getElementById('c-video').value='';
   document.getElementById('c-resultado').textContent='';
+  document.getElementById('c-btn-campanhas').style.display='none';
   document.getElementById('modalCampanha').style.display='flex';
   atualizaDestino();
   atualizaAlcance();
@@ -1353,7 +1357,7 @@ async function enviarCampanha(){
       throw new Error(mensagemErro);
     }
     var data=await res.json();
-    if(data.sucesso){out.style.color='#34d399';out.textContent='✅ '+data.mensagem+' (ID: '+data.campaign_id+')';}
+    if(data.sucesso){out.style.color='#34d399';out.textContent='✅ '+data.mensagem+' (ID: '+data.campaign_id+')';document.getElementById('c-btn-campanhas').style.display='block';}
     else{
       console.error('criar-campanha erro HTTP '+res.status,data);
       var errMsg=data.erro||data.error?.message||data.error||data.message||JSON.stringify(data);
