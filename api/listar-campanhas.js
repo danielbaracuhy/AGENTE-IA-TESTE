@@ -45,7 +45,7 @@ export default async function handler(req, res) {
       access_token: process.env.META_ACCESS_TOKEN,
     });
     const saldoQs = new URLSearchParams({
-      fields: 'balance,currency,is_prepay_account',
+      fields: 'balance,currency,is_prepay_account,spend_cap,amount_spent',
       access_token: process.env.META_ACCESS_TOKEN,
     });
     const [campanhasResult, saldoResult] = await Promise.allSettled([
