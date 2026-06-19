@@ -1252,12 +1252,14 @@ async function enviarCampanha(){
   if(arqImagem){
     if(arqImagem.size>10*1024*1024){out.style.color='#f55';out.textContent='❌ Imagem muito grande. Máximo 10MB.';return;}
     out.style.color='#fff';out.textContent='Enviando imagem...';
-    var modImg=await import('https://esm.sh/@vercel/blob/client');
-    var blobImg=await modImg.upload(arqImagem.name,arqImagem,{
-      access:'public',
-      handleUploadUrl:'/api/blob-upload',
-    });
-    criativos.push({tipo:'imagem',imagemUrl:blobImg.url});
+    try{
+      var modImg=await import('https://esm.sh/@vercel/blob/client');
+      var blobImg=await modImg.upload(arqImagem.name,arqImagem,{
+        access:'public',
+        handleUploadUrl:'/api/blob-upload',
+      });
+      criativos.push({tipo:'imagem',imagemUrl:blobImg.url});
+    }catch(e){out.style.color='#f87171';out.textContent='❌ Erro: '+e.message;return;}
   }
 
   // ── VÍDEO: Blob -> video-start -> polling video-status ──
