@@ -107,6 +107,7 @@ export default async function handler(req, res) {
       try {
         const sr = saldoResult.value;
         const sd = await sr.json();
+        console.log('DEBUG SALDO RAW:', JSON.stringify(sd));
         if (sr.ok && !sd.error && sd.is_prepay_account) {
           saldo = { valor: parseFloat(sd.balance) / 100, moeda: sd.currency };
         }
