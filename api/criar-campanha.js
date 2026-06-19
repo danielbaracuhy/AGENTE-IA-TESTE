@@ -10,7 +10,10 @@ const DESTINOS = {
   site:     { objective: "OUTCOME_TRAFFIC",    optimization_goal: "LINK_CLICKS",   billing_event: "IMPRESSIONS", destinoWhatsApp: false },
 };
 
-export const config = { maxDuration: 60 };
+export const config = {
+  maxDuration: 60,
+  api: { bodyParser: { sizeLimit: '10mb' } }
+};
 
 function clampRaio(km) { let r = Number(km) || 70; if (r < 1) r = 1; if (r > 70) r = 70; return r; }
 

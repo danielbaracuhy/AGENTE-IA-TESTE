@@ -1341,6 +1341,12 @@ async function enviarCampanha(){
   try{
     var _ses=(await supabase.auth.getSession()).data.session;
     var res=await fetch('/api/criar-campanha',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},_ses?{'Authorization':'Bearer '+_ses.access_token}:{}),body:JSON.stringify(payload)});
+    if(!res.ok){
+      var texto=await res.text();var mensagemErro='Erro ao criar campanha.';
+      try{var json=JSON.parse(texto);mensagemErro=json.erro||json.error||mensagemErro;}
+      catch(e){if(res.status===413){mensagemErro='A imagem ou vídeo enviado é muito grande. Tente uma imagem menor.';}else{mensagemErro='Erro do servidor ('+res.status+'). Tente novamente.';}}
+      throw new Error(mensagemErro);
+    }
     var data=await res.json();
     if(data.sucesso){out.style.color='#34d399';out.textContent='✅ '+data.mensagem+' (ID: '+data.campaign_id+')';}
     else{
