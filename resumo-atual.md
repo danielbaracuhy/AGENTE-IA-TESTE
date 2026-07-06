@@ -1,4 +1,4 @@
-# Resumo do Projeto — VendeMais Ads (atualizado 19/06/2026)
+# Resumo do Projeto — VendeMais Ads (atualizado 19/06/2026 — sessão completa)
 
 ## Visão geral
 App de gestão de tráfego com IA para PMEs. Marca: VendeMais Ads.
@@ -32,11 +32,11 @@ Seleção de gênero (Masculino/Feminino) por checkboxes no formulário. Ambos m
 **Imagem agora trafega via Vercel Blob (mesmo padrão do vídeo)** — elimina limite de payload de 10MB. Backend aceita imagemUrl com fallback para imagemBase64 (retrocompat). Blob de imagem é limpo no finally.
 **Vercel Blob allowedContentTypes ampliado** (commit 5b7cbce) para aceitar image/png, image/jpeg, image/jpg, image/webp, além dos 5 tipos de vídeo já existentes (9 tipos no total). Limite 200MB (frontend já bloqueia imagem em 10MB antes disso). Causa raiz de um 403 "Content type mismatch" descoberto em teste real — endpoint era restrito só a vídeo.
 Erros de rede (413, etc.) tratados graciosamente no frontend com mensagem clara ao usuário em vez de erro técnico bruto.
-**VALIDADO EM PRODUÇÃO com cliente real (David/Donna Lecka):** campanha criada com sucesso usando
-imagem via Blob, ID 1202499006123005**06**, status PAUSADA conforme esperado.
-**Botão "Ver Minhas Campanhas"** adicionado após sucesso na criação — fecha modal, recarrega a lista
-(`carregarCampanhas()`) e faz scroll suave até #sec-campanhas. Some ao reabrir o modal (reset limpo).
+**VALIDADO EM PRODUÇÃO com cliente real (David/Donna Lecka):** campanha criada com sucesso usando imagem via Blob, ID 120249900612300506, status PAUSADA conforme esperado.
+**Botão "Ver Minhas Campanhas"** adicionado após sucesso na criação — fecha modal, recarrega a lista (`carregarCampanhas()`) e faz scroll suave até #sec-campanhas. Some ao reabrir o modal (reset limpo).
 Implementação sem `mostrarTela()` — app é single-page com modal, não SPA com rotas internas.
+**Bug de travamento silencioso corrigido** (commit 2b9dbb0): bloco de upload de imagem agora tem try/catch igual ao padrão do vídeo — se modImg.upload() falhar, exibe `❌ Erro: <mensagem>` em vez de congelar em "Enviando imagem..." para sempre.
+**addRandomSuffix movido para o servidor** (commit 2319cdb): opção não é permitida no client/upload do @vercel/blob — deve ser configurada em api/blob-upload.js dentro do onBeforeGenerateToken. Causa raiz do "blob already exists": blob ficava órfão quando fluxo travava, bloqueando tentativas futuras com o mesmo nome de arquivo. Afeta vídeo e imagem igualmente.
 
 ### 2. MINHAS CAMPANHAS
 Lista ao vivo, Ativar/Pausar (cascata), Excluir, Escalar.
@@ -65,9 +65,8 @@ Exibido no topo de Minhas Campanhas. Fail-silent.
 centavos quando saldo real no Facebook era R$89,00, visto em Configurações > Cobrança e pagamentos).
 Causa identificada via pesquisa: para contas pré-pagas, `balance` não é confiável — cálculo correto
 é `spend_cap - amount_spent`. Já adicionados `spend_cap` e `amount_spent` ao log de debug
-(commit b3a879d) em api/listar-campanhas.js, mas AINDA NÃO LIDO o resultado real — ficou pendente
-porque sessão desviou para resolver bugs de criação de campanha (413, content-type). Tem
-`console.log('DEBUG SALDO RAW...')` ativo em produção — remover depois de corrigir.
+(commit b3a879d) em api/listar-campanhas.js, mas AINDA NÃO LIDO o resultado real.
+`console.log('DEBUG SALDO RAW...')` ainda ativo em produção — remover depois de corrigir.
 PRÓXIMO PASSO: pedir ao David (ou testar você mesmo) para recarregar Minhas Campanhas, ler logs
 da Vercel com spend_cap/amount_spent, recalcular fórmula do saldo, remover debug log.
 
@@ -99,19 +98,20 @@ privacidade.html acessível em vendemaisads.vercel.app/privacidade.html.
 Rota adicionada no vercel.json. Commit 1e7428d.
 PENDENTE: logo no topo da página ainda mostra versão antiga — trocar pelo logo atual VendeMais Ads.
 
-### 14. CONEXÃO DE CONTA DE ANÚNCIOS DE CLIENTE — PROCESSO VALIDADO
-Fluxo correto descoberto e testado com sucesso (cliente David/Donna Lecka):
-1. No Business Manager "daniel" → Contas → Contas de anúncios → "+ Adicionar"
+### 14. CONEXÃO DE CONTA E PÁGINA DO CLIENTE — PROCESSO VALIDADO E EXPANDIDO
+**Conta de anúncios** (fluxo original, validado com David/Donna Lecka):
+1. Business Manager "daniel" → Contas → Contas de anúncios → "+ Adicionar"
 2. Selecionar "Pedir acesso a uma conta de anúncios em outro portfólio empresarial"
    (NÃO usar "Criar nova" nem adicionar como Usuário do Sistema — isso NÃO funciona)
 3. Colar o ID da conta do cliente (sem "act_")
 4. Selecionar permissão "Gerenciar contas de anúncios" (Acesso total)
-5. Cliente recebe notificação no Facebook e aprova
-Esse processo é OBRIGATÓRIO e MANUAL para cada cliente novo — não há como herdar acesso entre
-clientes, pois cada um tem conta de anúncios separada no Meta. As correções de código (itens 1, 6)
-são permanentes e valem para todos os clientes automaticamente; só a conexão de conta é por-cliente.
-Solução futura possível para escalar: ferramentas tipo Leadsie que automatizam pedido de acesso
-via link único.
+5. Cliente aprova → atribuir vendemaisads-systemuser à conta com Acesso total
+**Página do Facebook** (descoberto em 19/06 — faltava no onboarding do David):
+1. Business Manager "daniel" → Páginas → + Adicionar → "Solicitar acesso compartilhado a uma Página do Facebook"
+2. Colar ID da página → permissões: Anúncios + Insights → cliente aprova
+3. Depois da aprovação: aba Pessoas → Atribuir acesso → vendemaisads-systemuser → Anúncios + Insights
+**ATENÇÃO:** acesso do System User a contas de anúncios pode cair sem aviso (aconteceu com David em 19/06 — causa desconhecida). Se cliente relatar erro de permissão, verificar e reatribuir no Business Manager.
+Onboarding completo = DOIS pedidos de acesso (conta de anúncios + página) — ambos exigem aprovação do cliente e atribuição manual do System User depois.
 
 ## BANCO (Supabase)
 Projeto: hboghsnggybnwvunnqju
@@ -123,11 +123,12 @@ Chaves: publishable (config.js) + secret (SUPABASE_SECRET_KEY na Vercel)
 ## ONBOARDING DE CLIENTES
 1. Cliente cria conta no app (trial automático)
 2. Agência coleta 4 IDs: Ad Account (act_X), Page ID, Business ID, WhatsApp (55DDNÚMERO)
-3. Agência solicita acesso à conta de anúncios do cliente no Business Manager (ver item 14) — cliente aprova
-4. Admin configura em /admin.html → Config Meta
-5. Admin ativa o cliente (trial → ativo)
+3. Agência solicita acesso à conta de anúncios do cliente no Business Manager (ver item 14) — cliente aprova — atribuir System User
+4. Agência solicita acesso à página do Facebook do cliente (ver item 14) — cliente aprova — atribuir System User
+5. Admin configura em /admin.html → Config Meta
+6. Admin ativa o cliente (trial → ativo)
 Documento: guia_ids_vendemais_ads.pdf
-Cliente de teste real: David (Donna Lecka), act_1310149873622083 — conectado, criou campanha com sucesso.
+Cliente de teste real: David (Donna Lecka), act_1310149873622083, página 102821495413468 — conectado, criou campanha com sucesso.
 
 ## META / APP REVIEW
 App: analista de ads (ID: 1720446445748871) — Publicado
@@ -156,7 +157,7 @@ Redirect URLs: https://vendemaisads.vercel.app + https://vendemaisads.vercel.app
 ## PENDÊNCIAS
 - **PRIORITÁRIO:** Ler logs da Vercel (spend_cap/amount_spent) e corrigir cálculo do saldo pré-pago;
   remover console.log de debug em api/listar-campanhas.js depois
-- Acompanhar com David se a campanha criada (ID 120249900612300506) roda bem ao ativar
+- Confirmar com David se campanha cria com sucesso após todos os fixes de 19/06 (try/catch + addRandomSuffix server-side)
 - Decidir se vale continuar o App Review da Meta dado o modelo de negócio real do app (ver nota acima),
   ou se o acesso via Business Manager por solicitação já resolve sem Advanced Access
 - Se decidir continuar App Review: retomar upload de screencast, preencher Tratamento de dados
@@ -197,3 +198,15 @@ Fluxo futuro: pagamento → webhook → ativa cliente no Supabase automaticament
   usa scrollIntoView + show/hide de elementos, não troca de "tela"**
 - Botão de ação pós-sucesso deve sempre recarregar dados (carregarCampanhas()) antes de navegar,
   senão mostra lista em cache sem o item recém-criado
+- **addRandomSuffix (e cacheControlMaxAge, allowOverwrite, ifMatch) NUNCA podem ser passadas no
+  client/upload do @vercel/blob — devem ser configuradas no servidor, dentro do onBeforeGenerateToken
+  em api/blob-upload.js**
+- **Blob de imagem pode ficar órfão se o fluxo travar antes do finally do backend — blobs órfãos
+  com o mesmo nome bloqueiam uploads futuros com "blob already exists". addRandomSuffix no servidor
+  resolve isso garantindo path único por upload**
+- **Acesso do System User a contas de anúncios pode cair sem aviso — se cliente relatar erro,
+  verificar e reatribuir no Business Manager antes de debugar o código**
+- **Onboarding completo requer DOIS pedidos de acesso no Business Manager: (1) conta de anúncios
+  e (2) página do Facebook — ambos exigem aprovação do cliente e atribuição manual do System User**
+- Async function chamada sem await em onclick HTML descarta a Promise rejeitada silenciosamente —
+  sempre envolver lógica async crítica em try/catch interno para garantir feedback ao usuário
