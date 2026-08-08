@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Painel Admin — VendeMais Ads</title>
+<title>Admin Simplex — Venda Mais Auto</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -61,6 +61,8 @@ tr:hover td{background:var(--surface2)}
 .msg-bar{font-size:12px;padding:8px 12px;border-radius:9px;margin-bottom:14px;display:none}
 .msg-bar.success{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.25);display:block}
 .msg-bar.error{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2);display:block}
+.demo{display:inline-flex;padding:2px 7px;border-radius:20px;background:rgba(245,158,11,.12);color:var(--yellow);font-size:9px;font-weight:700;letter-spacing:.06em}
+.infra-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.infra-item{padding:10px 12px;background:var(--surface2);border-radius:9px}.infra-item small{display:block;color:var(--muted);font-size:9px;text-transform:uppercase}.infra-item strong{font-size:12px}.secure-ref{padding:12px;border:1px solid rgba(34,197,94,.25);border-radius:9px;background:rgba(34,197,94,.08);color:var(--green);font-size:11px}
 
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.75);backdrop-filter:blur(4px)}
@@ -83,6 +85,7 @@ tr:hover td{background:var(--surface2)}
 @media(max-width:600px){
   .dash-body{padding:16px 12px 40px}
   .btn{padding:6px 10px;font-size:11px}
+  .infra-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -93,9 +96,10 @@ tr:hover td{background:var(--surface2)}
   <header class="dash-header">
     <div class="dash-header-inner">
       <div class="dash-brand">
-        <img src="assets/logo-vendemais.png" alt="VendeMais Ads" style="height:44px;width:auto;">
+        <img src="assets/logo-vendemais.png" alt="Venda Mais" style="height:44px;width:auto;">
         <div>
-          <div class="brand-sub">Painel Admin</div>
+          <div class="brand-title">ADMIN SIMPLEX</div>
+          <div class="brand-sub">Venda Mais Auto · separado do cliente</div>
         </div>
       </div>
       <button class="btn btn-ghost" id="btn-sair">⎋ Sair</button>
@@ -103,7 +107,7 @@ tr:hover td{background:var(--surface2)}
   </header>
 
   <main class="dash-body">
-    <p class="sec-title">Clientes</p>
+    <p class="sec-title">Empresas</p>
     <div id="msg-global" class="msg-bar"></div>
     <div class="tbl-wrap">
       <table>
@@ -111,7 +115,15 @@ tr:hover td{background:var(--surface2)}
           <tr>
             <th>Nome da empresa</th>
             <th>Status</th>
-            <th>Cadastro</th>
+            <th>Plano</th>
+            <th>Organização</th>
+            <th>Ambiente</th>
+            <th>VPS</th>
+            <th>WhatsApp</th>
+            <th>Zeus</th>
+            <th>Fera</th>
+            <th>Meta</th>
+            <th>Último acesso</th>
             <th>Ações</th>
           </tr>
         </thead>
@@ -120,6 +132,25 @@ tr:hover td{background:var(--surface2)}
     </div>
   </main>
 
+</div>
+
+<!-- Infraestrutura: somente referências visuais, sem segredos -->
+<div id="modal-infra" class="modal-overlay" style="display:none">
+  <div class="mc-box" style="max-width:680px">
+    <div class="mc-top"><h2 id="infra-titulo">Infraestrutura</h2><button class="mc-close" id="btn-infra-fechar">✕</button></div>
+    <div class="mc-body">
+      <span class="demo">ESTRUTURA DEMO</span>
+      <div class="infra-grid">
+        <div class="infra-item"><small>Provedor</small><strong>Não configurado</strong></div><div class="infra-item"><small>VPS / Host</small><strong>Referência pendente</strong></div>
+        <div class="infra-item"><small>Hostname / IP</small><strong>Não exposto</strong></div><div class="infra-item"><small>Usuário técnico</small><strong>Referência pendente</strong></div>
+        <div class="infra-item"><small>environment_id</small><strong>Não configurado</strong></div><div class="infra-item"><small>Health status</small><strong style="color:var(--yellow)">Não verificado</strong></div>
+        <div class="infra-item"><small>OpenClaw / Zeus</small><strong>Não conectado</strong></div><div class="infra-item"><small>Fera / WhatsApp</small><strong>Não conectado</strong></div>
+        <div class="infra-item"><small>Meta</small><strong>Usa configuração existente</strong></div><div class="infra-item"><small>Última verificação</small><strong>Sem health check</strong></div>
+      </div>
+      <div class="secure-ref">🔒 Credencial armazenada com segurança. O frontend mantém apenas referência técnica e nunca recebe o segredo real.</div>
+    </div>
+    <div class="mc-foot"><button class="btn btn-ghost" data-infra-demo>Abrir infraestrutura</button><button class="btn btn-ghost" data-infra-demo>Ver saúde</button><button class="btn btn-ghost" data-infra-demo>Credenciais</button></div>
+  </div>
 </div>
 
 <!-- Modal Config Meta -->
@@ -174,15 +205,17 @@ function fmtData(iso) {
 }
 
 function badgeHtml(status) {
-  const map = { ativo: ['bg-green','Ativo'], trial: ['bg-yellow','Trial'], suspenso: ['bg-red','Suspenso'] };
+  const map = { ativo: ['bg-green','ACTIVE'], trial: ['bg-yellow','TRIAL'], suspenso: ['bg-red','SUSPENDED'], inativo: ['bg-red','INACTIVE'] };
   const [cls, lbl] = map[status] ?? ['bg-yellow', status];
   return `<span class="badge ${cls}">${lbl}</span>`;
 }
 
 function acoesHtml(id, nomeEnc, status) {
   return `
+    <button class="btn btn-ghost btn-abrir" data-id="${id}">Abrir</button>
     ${status !== 'ativo'    ? `<button class="btn btn-success btn-ativar"    data-id="${id}">✓ Ativar</button>`    : ''}
     ${status !== 'suspenso' ? `<button class="btn btn-danger  btn-suspender" data-id="${id}">✕ Suspender</button>` : ''}
+    <button class="btn btn-ghost btn-infra" data-id="${id}" data-nome="${nomeEnc}">Infraestrutura</button>
     <button class="btn btn-ghost btn-config" data-id="${id}" data-nome="${nomeEnc}">⚙ Config Meta</button>
   `;
 }
@@ -190,7 +223,7 @@ function acoesHtml(id, nomeEnc, status) {
 function renderClientes(clientes) {
   const tbody = document.getElementById('tbody');
   if (!clientes.length) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:28px;color:var(--muted)">Nenhum cliente cadastrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:28px;color:var(--muted)">Nenhuma empresa cadastrada.</td></tr>';
     return;
   }
   tbody.innerHTML = clientes.map(c => {
@@ -199,7 +232,12 @@ function renderClientes(clientes) {
       <tr data-id="${c.id}" data-nome="${nomeEnc}">
         <td>${c.nome_empresa || c.email || '—'}</td>
         <td class="td-badge">${badgeHtml(c.status)}</td>
-        <td style="color:var(--muted);font-size:11px">${fmtData(c.created_at)}</td>
+        <td><span class="demo">DEMO</span> Cockpit</td>
+        <td style="color:var(--muted)">${c.id || '—'}</td>
+        <td><span class="demo">PENDENTE</span></td>
+        <td>Não vinculada</td><td>${c.meta_config?.whatsapp ? 'Configurado' : 'Pendente'}</td>
+        <td>Não conectado</td><td>Não conectado</td><td>${c.meta_config?.ativo ? 'Configurado' : 'Pendente'}</td>
+        <td style="color:var(--muted);font-size:11px">${fmtData(c.created_at)} <span class="demo">REFERÊNCIA</span></td>
         <td><div class="act-cell">${acoesHtml(c.id, nomeEnc, c.status)}</div></td>
       </tr>
     `;
@@ -220,6 +258,7 @@ function setModalStatus(msg, tipo) {
 }
 
 async function atualizarStatus(cliente_id, novoStatus, btn) {
+  if (novoStatus === 'suspenso' && !confirm('Suspender esta empresa? Dados, histórico, campanhas, arquivos e infraestrutura serão preservados.')) return;
   btn.disabled = true;
   try {
     const r = await fetch('/api/admin', {
@@ -298,6 +337,12 @@ function fecharModal() {
   _modalId = null;
 }
 
+function abrirInfra(nome) {
+  document.getElementById('infra-titulo').textContent = 'Infraestrutura — ' + nome;
+  document.getElementById('modal-infra').style.display = 'flex';
+}
+function fecharInfra() { document.getElementById('modal-infra').style.display = 'none'; }
+
 // Event listeners
 document.getElementById('btn-sair').addEventListener('click', async () => {
   await supabase.auth.signOut();
@@ -311,6 +356,8 @@ document.getElementById('tbody').addEventListener('click', e => {
   if (btn.classList.contains('btn-ativar'))    atualizarStatus(id, 'ativo', btn);
   if (btn.classList.contains('btn-suspender')) atualizarStatus(id, 'suspenso', btn);
   if (btn.classList.contains('btn-config'))    abrirModal(id, decodeURIComponent(btn.dataset.nome));
+  if (btn.classList.contains('btn-infra'))     abrirInfra(decodeURIComponent(btn.dataset.nome));
+  if (btn.classList.contains('btn-abrir'))     setGlobal('Ficha visual preparada. Nenhum dado real foi alterado.', 'success');
 });
 
 document.getElementById('btn-modal-salvar').addEventListener('click', salvarConfig);
@@ -319,6 +366,9 @@ document.getElementById('btn-modal-cancelar').addEventListener('click', fecharMo
 document.getElementById('modal-config').addEventListener('click', e => {
   if (e.target.id === 'modal-config') fecharModal();
 });
+document.getElementById('btn-infra-fechar').addEventListener('click', fecharInfra);
+document.getElementById('modal-infra').addEventListener('click', e => { if (e.target.id === 'modal-infra') fecharInfra(); });
+document.querySelectorAll('[data-infra-demo]').forEach(btn => btn.addEventListener('click', () => setGlobal('Ação de infraestrutura disponível apenas em etapa futura.', 'success')));
 
 // Boot — verifica sessão e permissão admin antes de renderizar qualquer coisa
 const { data: { session } } = await supabase.auth.getSession();
